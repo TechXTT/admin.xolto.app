@@ -8,7 +8,7 @@ export type User = {
   email: string;
   name: string;
   tier: string;
-  role?: "owner" | "operator" | "admin" | "";
+  role?: "owner" | "operator" | "admin" | "user" | "";
   is_admin?: boolean;
 };
 
@@ -341,7 +341,7 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ is_admin: isAdmin }),
       })),
-    updateUserRole: async (id: string, role: "owner" | "operator" | "admin") =>
+    updateUserRole: async (id: string, role: "owner" | "operator" | "admin" | "user") =>
       unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; role: string }>>(`/admin/users/${id}/role`, {
         method: "POST",
         body: JSON.stringify({ role }),

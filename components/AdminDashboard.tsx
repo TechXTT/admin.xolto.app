@@ -29,6 +29,18 @@ type Tab =
   | "alerts";
 
 const PERIOD_OPTIONS = [7, 14, 30, 90];
+type AdminRole = "owner" | "operator" | "admin" | "user";
+
+function normalizeAdminRole(role: string | undefined, isAdmin: boolean): AdminRole {
+  const value = (role || "").trim().toLowerCase();
+  if (value === "owner" || value === "operator" || value === "admin" || value === "user") {
+    return value;
+  }
+  if (isAdmin) {
+    return "admin";
+  }
+  return "user";
+}
 
 function formatDate(value: string) {
   if (!value) return "—";
@@ -130,6 +142,14 @@ export default function AdminDashboard() {
   const usageFailures = useMemo(
     () => usage.filter((entry) => !entry.Success).length,
     [usage],
+  );
+  const teamUsers = useMemo(
+    () => users.filter((entry) => normalizeAdminRole(entry.role, entry.is_admin) !== "user"),
+    [users],
+  );
+  const productUsers = useMemo(
+    () => users.filter((entry) => normalizeAdminRole(entry.role, entry.is_admin) === "user"),
+    [users],
   );
   const filteredRuns = useMemo(() => {
     if (!runIncidentsOnly) return runs;
@@ -342,17 +362,17 @@ export default function AdminDashboard() {
   }
 
   async function applyUserRole(user: AdminUser) {
-    const role = (roleDrafts[user.id] || user.role || "admin").trim().toLowerCase();
+    const role = (roleDrafts[user.id] || normalizeAdminRole(user.role, user.is_admin)).trim().toLowerCase();
     if (!isOwner) return;
-    if (role !== "owner" && role !== "operator" && role !== "admin") {
-      setError("Role must be owner, operator, or admin.");
+    if (role !== "owner" && role !== "operator" && role !== "admin" && role !== "user") {
+      setError("Role must be owner, operator, admin, or user.");
       return;
     }
     setPendingAction(`role:${user.id}`);
     setError("");
     setNotice("");
     try {
-      await api.admin.updateUserRole(user.id, role as "owner" | "operator" | "admin");
+      await api.admin.updateUserRole(user.id, role as "owner" | "operator" | "admin" | "user");
       setNotice(`Updated role for ${user.email} to ${role}.`);
       await loadCore(days);
     } catch (err) {
@@ -601,7 +621,8 @@ export default function AdminDashboard() {
           {tab === "users" && (
             <section className="panel">
               <h2>Users</h2>
-              <p className="subtle">Manage tier, role, and admin compatibility flag.</p>
+              <p className="subtle">Team users (owner/operator/admin) are separated from product users (user).</p>
+              <h3>Team users ({teamUsers.length})</h3>
               <div className="table-wrap">
                 <table>
                   <thead>
@@ -617,7 +638,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((entry) => (
+                    {teamUsers.map((entry) => (
                       <tr key={entry.id}>
                         <td>{entry.email}</td>
                         <td>
@@ -632,10 +653,87 @@ export default function AdminDashboard() {
                         </td>
                         <td>
                           <select
-                            value={roleDrafts[entry.id] ?? entry.role ?? "admin"}
+                            value={roleDrafts[entry.id] ?? normalizeAdminRole(entry.role, entry.is_admin)}
                             onChange={(event) => setRoleDrafts((prev) => ({ ...prev, [entry.id]: event.target.value }))}
                             disabled={!isOwner}
                           >
+                            <option value="admin">admin</option>
+                            <option value="operator">operator</option>
+                            <option value="owner">owner</option>
+                            <option value="user">user</option>
+                          </select>
+                        </td>
+                        <td>{entry.is_admin ? "yes" : "no"}</td>
+                        <td>{entry.mission_count}</td>
+                        <td>{entry.search_count}</td>
+                        <td>{entry.ai_call_count}</td>
+                        <td className="actions">
+                          <button className="btn" type="button" disabled={pendingAction === `tier:${entry.id}`} onClick={() => void applyUserTier(entry)}>
+                            Apply tier
+                          </button>
+                          <button
+                            className="btn muted"
+                            type="button"
+                            disabled={!isOwner || pendingAction === `role:${entry.id}`}
+                            onClick={() => void applyUserRole(entry)}
+                          >
+                            Apply role
+                          </button>
+                          <button
+                            className="btn muted"
+                            type="button"
+                            disabled={pendingAction === `admin:${entry.id}`}
+                            onClick={() => void toggleUserAdmin(entry)}
+                          >
+                            {entry.is_admin ? "Revoke admin" : "Grant admin"}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {teamUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={8}>No team users found.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <h3 style={{ marginTop: 20 }}>Product users ({productUsers.length})</h3>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Tier</th>
+                      <th>Role</th>
+                      <th>Admin</th>
+                      <th>Missions</th>
+                      <th>Searches</th>
+                      <th>AI Calls</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productUsers.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{entry.email}</td>
+                        <td>
+                          <select
+                            value={tierDrafts[entry.id] ?? entry.tier}
+                            onChange={(event) => setTierDrafts((prev) => ({ ...prev, [entry.id]: event.target.value }))}
+                          >
+                            <option value="free">free</option>
+                            <option value="pro">pro</option>
+                            <option value="power">power</option>
+                          </select>
+                        </td>
+                        <td>
+                          <select
+                            value={roleDrafts[entry.id] ?? normalizeAdminRole(entry.role, entry.is_admin)}
+                            onChange={(event) => setRoleDrafts((prev) => ({ ...prev, [entry.id]: event.target.value }))}
+                            disabled={!isOwner}
+                          >
+                            <option value="user">user</option>
                             <option value="admin">admin</option>
                             <option value="operator">operator</option>
                             <option value="owner">owner</option>
@@ -668,9 +766,9 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {users.length === 0 && (
+                    {productUsers.length === 0 && (
                       <tr>
-                        <td colSpan={8}>No users found.</td>
+                        <td colSpan={8}>No product users found.</td>
                       </tr>
                     )}
                   </tbody>
