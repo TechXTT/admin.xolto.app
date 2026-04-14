@@ -17,8 +17,10 @@ export default function LoginPage() {
     try {
       await api.auth.login(email, password);
       const me = await api.auth.me();
-      if (!me.is_admin) {
-        setError("This account is not an admin account.");
+      const role = (me.role || "").toLowerCase();
+      const hasAccess = Boolean(me.is_admin || role === "owner" || role === "operator" || role === "admin");
+      if (!hasAccess) {
+        setError("This account does not have operator/owner access.");
         setLoading(false);
         return;
       }

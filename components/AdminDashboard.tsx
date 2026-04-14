@@ -3,15 +3,30 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  AdminAIStats,
   AdminSearchRun,
   AdminSearchStats,
   AdminUsageEntry,
   AdminUser,
   api,
-  AdminAIStats,
+  BusinessAlert,
+  BusinessCohort,
+  BusinessFunnel,
+  BusinessOverview,
+  BusinessRevenuePoint,
+  BusinessSubscription,
+  User,
 } from "../lib/api";
 
-type Tab = "overview" | "users" | "operations" | "usage";
+type Tab =
+  | "overview"
+  | "users"
+  | "operations"
+  | "usage"
+  | "executive"
+  | "subscriptions"
+  | "growth"
+  | "alerts";
 
 const PERIOD_OPTIONS = [7, 14, 30, 90];
 
@@ -22,7 +37,7 @@ function formatDate(value: string) {
   return date.toLocaleString();
 }
 
-function formatCost(value: number) {
+function formatUSD(value: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -30,18 +45,44 @@ function formatCost(value: number) {
   }).format(value || 0);
 }
 
+function formatEUR(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "EUR",
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+}
+
+function formatMinor(amount: number, currency: string) {
+  const major = (amount || 0) / 100;
+  const code = (currency || "EUR").toUpperCase();
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: code,
+    maximumFractionDigits: 2,
+  }).format(major);
+}
+
 export default function AdminDashboard() {
   const [tab, setTab] = useState<Tab>("overview");
   const [days, setDays] = useState(30);
+  const [viewer, setViewer] = useState<User | null>(null);
   const [stats, setStats] = useState<AdminAIStats | null>(null);
   const [searchStats, setSearchStats] = useState<AdminSearchStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [usage, setUsage] = useState<AdminUsageEntry[]>([]);
   const [runs, setRuns] = useState<AdminSearchRun[]>([]);
+  const [businessOverview, setBusinessOverview] = useState<BusinessOverview | null>(null);
+  const [businessRevenue, setBusinessRevenue] = useState<BusinessRevenuePoint[]>([]);
+  const [businessSubscriptions, setBusinessSubscriptions] = useState<BusinessSubscription[]>([]);
+  const [businessFunnel, setBusinessFunnel] = useState<BusinessFunnel | null>(null);
+  const [businessCohorts, setBusinessCohorts] = useState<BusinessCohort[]>([]);
+  const [businessAlerts, setBusinessAlerts] = useState<BusinessAlert[]>([]);
   const [loadingCore, setLoadingCore] = useState(true);
   const [loadingTabData, setLoadingTabData] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [pendingAction, setPendingAction] = useState("");
 
   const [runStatus, setRunStatus] = useState("");
   const [runMarketplace, setRunMarketplace] = useState("");
@@ -58,8 +99,25 @@ export default function AdminDashboard() {
   const [searchIDInput, setSearchIDInput] = useState("");
   const [searchEnabledInput, setSearchEnabledInput] = useState<"true" | "false">("true");
   const [runSearchIDInput, setRunSearchIDInput] = useState("");
-  const [pendingAction, setPendingAction] = useState("");
   const [tierDrafts, setTierDrafts] = useState<Record<string, string>>({});
+  const [roleDrafts, setRoleDrafts] = useState<Record<string, string>>({});
+
+  const [subStatus, setSubStatus] = useState("");
+  const [subPlan, setSubPlan] = useState("");
+  const [subUser, setSubUser] = useState("");
+  const [subCountry, setSubCountry] = useState("");
+  const [subPriceDrafts, setSubPriceDrafts] = useState<Record<string, string>>({});
+
+  const viewerRole = (viewer?.role || "").toLowerCase();
+  const isOwner = viewerRole === "owner";
+
+  const tabs: Tab[] = useMemo(() => {
+    const base: Tab[] = ["overview", "users", "operations", "usage"];
+    if (isOwner) {
+      return [...base, "executive", "subscriptions", "growth", "alerts"];
+    }
+    return base;
+  }, [isOwner]);
 
   const activeUsers = useMemo(
     () => users.filter((entry) => entry.mission_count > 0 || entry.search_count > 0).length,
@@ -73,12 +131,10 @@ export default function AdminDashboard() {
     () => usage.filter((entry) => !entry.Success).length,
     [usage],
   );
-
   const filteredRuns = useMemo(() => {
     if (!runIncidentsOnly) return runs;
     return runs.filter((entry) => entry.status !== "success" || entry.error_code !== "");
   }, [runs, runIncidentsOnly]);
-
   const filteredUsage = useMemo(() => {
     return usage.filter((entry) => {
       if (usageFailuresOnly && entry.Success) return false;
@@ -87,6 +143,9 @@ export default function AdminDashboard() {
       return true;
     });
   }, [usage, usageFailuresOnly, usageUserFilter, usageCallTypeFilter]);
+  const recurringRevenue = useMemo(() => {
+    return businessRevenue.reduce((sum, point) => sum + (point.amount_paid || 0), 0);
+  }, [businessRevenue]);
 
   async function signOut() {
     try {
@@ -97,17 +156,28 @@ export default function AdminDashboard() {
     window.location.replace("/login");
   }
 
+  async function loadViewer() {
+    try {
+      const me = await api.auth.me();
+      setViewer(me);
+    } catch {
+      // Guard handles redirect/errors.
+    }
+  }
+
   async function loadCore(selectedDays: number) {
     setLoadingCore(true);
     setError("");
     try {
-      const [statsRes, usersRes] = await Promise.all([
+      const [statsRes, usersRes, businessOverviewRes] = await Promise.all([
         api.admin.stats(selectedDays),
         api.admin.users(),
+        api.admin.businessOverview(selectedDays),
       ]);
       setStats(statsRes.stats);
       setSearchStats(statsRes.search_stats);
       setUsers(usersRes.users || []);
+      setBusinessOverview(businessOverviewRes.overview || null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load admin data.");
     } finally {
@@ -148,9 +218,82 @@ export default function AdminDashboard() {
     }
   }
 
+  async function loadBusinessExecutive(selectedDays: number) {
+    setLoadingTabData(true);
+    setError("");
+    try {
+      const [overviewRes, revenueRes] = await Promise.all([
+        api.admin.businessOverview(selectedDays),
+        api.admin.businessRevenue(selectedDays),
+      ]);
+      setBusinessOverview(overviewRes.overview || null);
+      setBusinessRevenue(revenueRes.points || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load executive data.");
+    } finally {
+      setLoadingTabData(false);
+    }
+  }
+
+  async function loadBusinessSubscriptions() {
+    setLoadingTabData(true);
+    setError("");
+    try {
+      const result = await api.admin.businessSubscriptions({
+        limit: 200,
+        status: subStatus,
+        plan: subPlan,
+        user: subUser,
+        country: subCountry,
+      });
+      setBusinessSubscriptions(result.subscriptions || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load subscriptions.");
+    } finally {
+      setLoadingTabData(false);
+    }
+  }
+
+  async function loadBusinessGrowth(selectedDays: number) {
+    setLoadingTabData(true);
+    setError("");
+    try {
+      const [funnelRes, cohortRes] = await Promise.all([
+        api.admin.businessFunnel(selectedDays),
+        api.admin.businessCohorts(6),
+      ]);
+      setBusinessFunnel(funnelRes.funnel || null);
+      setBusinessCohorts(cohortRes.cohorts || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load growth data.");
+    } finally {
+      setLoadingTabData(false);
+    }
+  }
+
+  async function loadBusinessAlerts(selectedDays: number) {
+    setLoadingTabData(true);
+    setError("");
+    try {
+      const result = await api.admin.businessAlerts(Math.min(selectedDays, 30));
+      setBusinessAlerts(result.alerts || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load business alerts.");
+    } finally {
+      setLoadingTabData(false);
+    }
+  }
+
   useEffect(() => {
+    void loadViewer();
     void loadCore(days);
   }, [days]);
+
+  useEffect(() => {
+    if (!tabs.includes(tab)) {
+      setTab("overview");
+    }
+  }, [tab, tabs]);
 
   useEffect(() => {
     if (tab === "usage") {
@@ -159,8 +302,27 @@ export default function AdminDashboard() {
     }
     if (tab === "operations") {
       void loadRuns(days);
+      return;
     }
-  }, [tab, days, runStatus, runMarketplace, runCountry, runUser]);
+    if (!isOwner && (tab === "executive" || tab === "subscriptions" || tab === "growth" || tab === "alerts")) {
+      return;
+    }
+    if (tab === "executive") {
+      void loadBusinessExecutive(days);
+      return;
+    }
+    if (tab === "subscriptions") {
+      void loadBusinessSubscriptions();
+      return;
+    }
+    if (tab === "growth") {
+      void loadBusinessGrowth(days);
+      return;
+    }
+    if (tab === "alerts") {
+      void loadBusinessAlerts(days);
+    }
+  }, [tab, days, isOwner, runStatus, runMarketplace, runCountry, runUser, subStatus, subPlan, subUser, subCountry]);
 
   async function applyUserTier(user: AdminUser) {
     const tier = (tierDrafts[user.id] || user.tier).trim().toLowerCase();
@@ -174,6 +336,27 @@ export default function AdminDashboard() {
       await loadCore(days);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update user tier.");
+    } finally {
+      setPendingAction("");
+    }
+  }
+
+  async function applyUserRole(user: AdminUser) {
+    const role = (roleDrafts[user.id] || user.role || "admin").trim().toLowerCase();
+    if (!isOwner) return;
+    if (role !== "owner" && role !== "operator" && role !== "admin") {
+      setError("Role must be owner, operator, or admin.");
+      return;
+    }
+    setPendingAction(`role:${user.id}`);
+    setError("");
+    setNotice("");
+    try {
+      await api.admin.updateUserRole(user.id, role as "owner" | "operator" | "admin");
+      setNotice(`Updated role for ${user.email} to ${role}.`);
+      await loadCore(days);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update user role.");
     } finally {
       setPendingAction("");
     }
@@ -272,12 +455,61 @@ export default function AdminDashboard() {
     }
   }
 
+  async function ownerSubscriptionAction(action: "plan" | "cancel" | "resume" | "pause" | "sync", item: BusinessSubscription) {
+    if (!isOwner) return;
+    const subID = item.subscription_id;
+    setPendingAction(`${action}:${subID}`);
+    setError("");
+    setNotice("");
+    try {
+      if (action === "plan") {
+        const nextPrice = (subPriceDrafts[subID] || item.plan_price_id).trim();
+        if (!nextPrice) {
+          setError("Set a target Stripe price ID first.");
+          setPendingAction("");
+          return;
+        }
+        await api.admin.ownerUpdatePlan(subID, nextPrice);
+      } else if (action === "cancel") {
+        await api.admin.ownerCancelAtPeriodEnd(subID);
+      } else if (action === "resume") {
+        await api.admin.ownerResume(subID);
+      } else if (action === "pause") {
+        await api.admin.ownerPause(subID);
+      } else {
+        await api.admin.ownerSyncSubscription(subID);
+      }
+      setNotice(`Subscription ${subID} ${action} completed.`);
+      await Promise.all([loadBusinessSubscriptions(), loadBusinessExecutive(days), loadBusinessAlerts(days)]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Subscription action failed.");
+    } finally {
+      setPendingAction("");
+    }
+  }
+
+  async function runOwnerReconcile() {
+    if (!isOwner) return;
+    setPendingAction("reconcile");
+    setError("");
+    setNotice("");
+    try {
+      const result = await api.admin.ownerReconcile();
+      setNotice(`Reconcile run ${result.run_id} completed.`);
+      await Promise.all([loadBusinessExecutive(days), loadBusinessSubscriptions(), loadBusinessAlerts(days)]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Reconcile failed.");
+    } finally {
+      setPendingAction("");
+    }
+  }
+
   return (
     <main className="admin-shell">
       <header className="topbar">
         <div>
-          <p className="eyebrow">xolto-admin v1</p>
-          <h1>Operations + Statistics</h1>
+          <p className="eyebrow">xolto-admin v2</p>
+          <h1>Owner Business Suite</h1>
         </div>
         <div className="topbar-controls">
           <label className="inline-field">
@@ -290,6 +522,12 @@ export default function AdminDashboard() {
               ))}
             </select>
           </label>
+          <span className="subtle-pill">role: {viewerRole || "admin"}</span>
+          {isOwner && (
+            <button className="btn" type="button" disabled={pendingAction === "reconcile"} onClick={() => void runOwnerReconcile()}>
+              Run reconcile
+            </button>
+          )}
           <button className="btn muted" type="button" onClick={signOut}>
             Sign out
           </button>
@@ -297,13 +535,8 @@ export default function AdminDashboard() {
       </header>
 
       <nav className="tabs">
-        {(["overview", "users", "operations", "usage"] as Tab[]).map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={tab === item ? "tab active" : "tab"}
-            onClick={() => setTab(item)}
-          >
+        {tabs.map((item) => (
+          <button key={item} type="button" className={tab === item ? "tab active" : "tab"} onClick={() => setTab(item)}>
             {item}
           </button>
         ))}
@@ -336,7 +569,7 @@ export default function AdminDashboard() {
               </article>
               <article className="panel metric">
                 <span>Estimated AI cost</span>
-                <strong>{formatCost(stats?.EstimatedCostUSD || 0)}</strong>
+                <strong>{formatUSD(stats?.EstimatedCostUSD || 0)}</strong>
               </article>
               <article className="panel metric">
                 <span>Search runs</span>
@@ -347,30 +580,35 @@ export default function AdminDashboard() {
                 <strong>{searchStats?.failed_runs.toLocaleString() || "0"}</strong>
               </article>
               <article className="panel metric">
-                <span>Search failure rate</span>
+                <span>Failure rate</span>
                 <strong>{(searchStats?.failure_rate_pct || 0).toFixed(1)}%</strong>
               </article>
-              <article className="panel metric">
-                <span>Avg queue wait</span>
-                <strong>{searchStats?.average_queue_wait_ms || 0} ms</strong>
-              </article>
-              <article className="panel metric">
-                <span>Mission freshness</span>
-                <strong>{searchStats?.average_mission_freshness_mins || 0} min</strong>
-              </article>
+              {isOwner && (
+                <article className="panel metric">
+                  <span>MRR (EUR)</span>
+                  <strong>{formatEUR(businessOverview?.mrr || 0)}</strong>
+                </article>
+              )}
+              {isOwner && (
+                <article className="panel metric">
+                  <span>Failed payments</span>
+                  <strong>{businessOverview?.failed_payments || 0}</strong>
+                </article>
+              )}
             </section>
           )}
 
           {tab === "users" && (
             <section className="panel">
               <h2>Users</h2>
-              <p className="subtle">Manage tier and admin privileges.</p>
+              <p className="subtle">Manage tier, role, and admin compatibility flag.</p>
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
                       <th>Email</th>
                       <th>Tier</th>
+                      <th>Role</th>
                       <th>Admin</th>
                       <th>Missions</th>
                       <th>Searches</th>
@@ -379,46 +617,60 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.map((user) => (
-                      <tr key={user.id}>
-                        <td>{user.email}</td>
+                    {users.map((entry) => (
+                      <tr key={entry.id}>
+                        <td>{entry.email}</td>
                         <td>
                           <select
-                            value={tierDrafts[user.id] ?? user.tier}
-                            onChange={(event) => setTierDrafts((prev) => ({ ...prev, [user.id]: event.target.value }))}
+                            value={tierDrafts[entry.id] ?? entry.tier}
+                            onChange={(event) => setTierDrafts((prev) => ({ ...prev, [entry.id]: event.target.value }))}
                           >
                             <option value="free">free</option>
                             <option value="pro">pro</option>
                             <option value="power">power</option>
                           </select>
                         </td>
-                        <td>{user.is_admin ? "yes" : "no"}</td>
-                        <td>{user.mission_count}</td>
-                        <td>{user.search_count}</td>
-                        <td>{user.ai_call_count}</td>
-                        <td className="actions">
-                          <button
-                            className="btn"
-                            type="button"
-                            disabled={pendingAction === `tier:${user.id}`}
-                            onClick={() => void applyUserTier(user)}
+                        <td>
+                          <select
+                            value={roleDrafts[entry.id] ?? entry.role ?? "admin"}
+                            onChange={(event) => setRoleDrafts((prev) => ({ ...prev, [entry.id]: event.target.value }))}
+                            disabled={!isOwner}
                           >
+                            <option value="admin">admin</option>
+                            <option value="operator">operator</option>
+                            <option value="owner">owner</option>
+                          </select>
+                        </td>
+                        <td>{entry.is_admin ? "yes" : "no"}</td>
+                        <td>{entry.mission_count}</td>
+                        <td>{entry.search_count}</td>
+                        <td>{entry.ai_call_count}</td>
+                        <td className="actions">
+                          <button className="btn" type="button" disabled={pendingAction === `tier:${entry.id}`} onClick={() => void applyUserTier(entry)}>
                             Apply tier
                           </button>
                           <button
                             className="btn muted"
                             type="button"
-                            disabled={pendingAction === `admin:${user.id}`}
-                            onClick={() => void toggleUserAdmin(user)}
+                            disabled={!isOwner || pendingAction === `role:${entry.id}`}
+                            onClick={() => void applyUserRole(entry)}
                           >
-                            {user.is_admin ? "Revoke admin" : "Grant admin"}
+                            Apply role
+                          </button>
+                          <button
+                            className="btn muted"
+                            type="button"
+                            disabled={pendingAction === `admin:${entry.id}`}
+                            onClick={() => void toggleUserAdmin(entry)}
+                          >
+                            {entry.is_admin ? "Revoke admin" : "Grant admin"}
                           </button>
                         </td>
                       </tr>
                     ))}
                     {users.length === 0 && (
                       <tr>
-                        <td colSpan={7}>No users found.</td>
+                        <td colSpan={8}>No users found.</td>
                       </tr>
                     )}
                   </tbody>
@@ -502,15 +754,10 @@ export default function AdminDashboard() {
                     <input value={runUser} onChange={(event) => setRunUser(event.target.value)} placeholder="user id" />
                   </label>
                   <label className="checkbox">
-                    <input
-                      type="checkbox"
-                      checked={runIncidentsOnly}
-                      onChange={(event) => setRunIncidentsOnly(event.target.checked)}
-                    />
+                    <input type="checkbox" checked={runIncidentsOnly} onChange={(event) => setRunIncidentsOnly(event.target.checked)} />
                     <span>Incidents only</span>
                   </label>
                 </div>
-
                 {loadingTabData ? (
                   <p className="subtle">Loading search runs…</p>
                 ) : (
@@ -538,10 +785,14 @@ export default function AdminDashboard() {
                               {entry.search_name || `#${entry.search_config_id}`}
                               <div className="muted-text">mission #{entry.mission_id}</div>
                             </td>
-                            <td>{entry.marketplace_id} / {entry.country_code}</td>
+                            <td>
+                              {entry.marketplace_id} / {entry.country_code}
+                            </td>
                             <td>
                               {entry.results_found} results
-                              <div className="muted-text">{entry.new_listings} new, {entry.deal_hits} hits</div>
+                              <div className="muted-text">
+                                {entry.new_listings} new, {entry.deal_hits} hits
+                              </div>
                             </td>
                             <td>{entry.error_code || "—"}</td>
                             <td>
@@ -585,15 +836,10 @@ export default function AdminDashboard() {
                   <input value={usageCallTypeFilter} onChange={(event) => setUsageCallTypeFilter(event.target.value)} />
                 </label>
                 <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={usageFailuresOnly}
-                    onChange={(event) => setUsageFailuresOnly(event.target.checked)}
-                  />
+                  <input type="checkbox" checked={usageFailuresOnly} onChange={(event) => setUsageFailuresOnly(event.target.checked)} />
                   <span>Failures only</span>
                 </label>
               </div>
-
               {loadingTabData ? (
                 <p className="subtle">Loading usage log…</p>
               ) : (
@@ -603,6 +849,7 @@ export default function AdminDashboard() {
                       <tr>
                         <th>Time</th>
                         <th>User</th>
+                        <th>Mission</th>
                         <th>Call type</th>
                         <th>Model</th>
                         <th>Tokens</th>
@@ -616,6 +863,7 @@ export default function AdminDashboard() {
                         <tr key={entry.ID}>
                           <td>{formatDate(entry.CreatedAt)}</td>
                           <td>{entry.UserID}</td>
+                          <td>{entry.MissionID > 0 ? `#${entry.MissionID}` : "—"}</td>
                           <td>{entry.CallType}</td>
                           <td>{entry.Model}</td>
                           <td>{entry.TotalTokens.toLocaleString()}</td>
@@ -626,13 +874,325 @@ export default function AdminDashboard() {
                       ))}
                       {filteredUsage.length === 0 && (
                         <tr>
-                          <td colSpan={8}>No usage events matched the current filters.</td>
+                          <td colSpan={9}>No usage events matched the current filters.</td>
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
               )}
+            </section>
+          )}
+
+          {tab === "executive" && (
+            <section className="stack">
+              <article className="grid">
+                <article className="panel metric">
+                  <span>MRR</span>
+                  <strong>{formatEUR(businessOverview?.mrr || 0)}</strong>
+                </article>
+                <article className="panel metric">
+                  <span>ARR</span>
+                  <strong>{formatEUR(businessOverview?.arr || 0)}</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Active paid</span>
+                  <strong>{(businessOverview?.active_paid_accounts || 0).toLocaleString()}</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Churn</span>
+                  <strong>{(businessOverview?.churn_rate_pct || 0).toFixed(1)}%</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Revenue ({days}d)</span>
+                  <strong>{formatEUR(businessOverview?.revenue_eur_30d || 0)}</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Revenue trend</span>
+                  <strong>{(businessOverview?.revenue_trend_pct || 0).toFixed(1)}%</strong>
+                </article>
+              </article>
+              <article className="panel">
+                <h2>Revenue timeline</h2>
+                {loadingTabData ? (
+                  <p className="subtle">Loading revenue…</p>
+                ) : (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Bucket</th>
+                          <th>Currency</th>
+                          <th>Paid amount</th>
+                          <th>Invoices</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {businessRevenue.map((point) => (
+                          <tr key={`${point.bucket_start}-${point.currency}`}>
+                            <td>{formatDate(point.bucket_start)}</td>
+                            <td>{point.currency}</td>
+                            <td>{formatMinor(point.amount_paid, point.currency)}</td>
+                            <td>{point.invoices}</td>
+                          </tr>
+                        ))}
+                        {businessRevenue.length === 0 && (
+                          <tr>
+                            <td colSpan={4}>No revenue rows for the selected window.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p className="subtle">Raw paid total across currencies: {formatEUR(recurringRevenue / 100)}</p>
+              </article>
+            </section>
+          )}
+
+          {tab === "subscriptions" && (
+            <section className="panel">
+              <h2>Subscriptions</h2>
+              <div className="filter-row">
+                <label className="inline-field">
+                  <span>Status</span>
+                  <input value={subStatus} onChange={(event) => setSubStatus(event.target.value)} placeholder="active, canceled…" />
+                </label>
+                <label className="inline-field">
+                  <span>Plan price id</span>
+                  <input value={subPlan} onChange={(event) => setSubPlan(event.target.value)} placeholder="price_..." />
+                </label>
+                <label className="inline-field">
+                  <span>User ID</span>
+                  <input value={subUser} onChange={(event) => setSubUser(event.target.value)} placeholder="user id" />
+                </label>
+                <label className="inline-field">
+                  <span>Country</span>
+                  <input value={subCountry} onChange={(event) => setSubCountry(event.target.value)} placeholder="NL / BG" />
+                </label>
+              </div>
+
+              {loadingTabData ? (
+                <p className="subtle">Loading subscriptions…</p>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Subscription</th>
+                        <th>User</th>
+                        <th>Status</th>
+                        <th>Plan</th>
+                        <th>Period</th>
+                        <th>Invoice</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {businessSubscriptions.map((entry) => (
+                        <tr key={entry.subscription_id}>
+                          <td>{entry.subscription_id}</td>
+                          <td>
+                            {entry.user_email || entry.user_id}
+                            <div className="muted-text">{entry.user_tier}</div>
+                          </td>
+                          <td>
+                            {entry.status}
+                            {entry.paused && <div className="muted-text">paused collection</div>}
+                          </td>
+                          <td>
+                            <input
+                              value={subPriceDrafts[entry.subscription_id] ?? entry.plan_price_id}
+                              onChange={(event) =>
+                                setSubPriceDrafts((prev) => ({ ...prev, [entry.subscription_id]: event.target.value }))
+                              }
+                              disabled={!isOwner}
+                            />
+                            <div className="muted-text">{entry.plan_interval || "n/a"}</div>
+                          </td>
+                          <td>
+                            {formatDate(entry.current_period_start)}
+                            <div className="muted-text">to {formatDate(entry.current_period_end)}</div>
+                          </td>
+                          <td>
+                            {entry.invoice_status || "—"}
+                            <div className="muted-text">
+                              due {formatMinor(entry.amount_due, entry.currency)} / paid {formatMinor(entry.amount_paid, entry.currency)}
+                            </div>
+                          </td>
+                          <td className="actions">
+                            <button
+                              className="btn muted"
+                              type="button"
+                              disabled={!isOwner || pendingAction === `plan:${entry.subscription_id}`}
+                              onClick={() => void ownerSubscriptionAction("plan", entry)}
+                            >
+                              Plan switch
+                            </button>
+                            <button
+                              className="btn muted"
+                              type="button"
+                              disabled={!isOwner || pendingAction === `cancel:${entry.subscription_id}`}
+                              onClick={() => void ownerSubscriptionAction("cancel", entry)}
+                            >
+                              Cancel end
+                            </button>
+                            <button
+                              className="btn muted"
+                              type="button"
+                              disabled={!isOwner || pendingAction === `resume:${entry.subscription_id}`}
+                              onClick={() => void ownerSubscriptionAction("resume", entry)}
+                            >
+                              Resume
+                            </button>
+                            <button
+                              className="btn muted"
+                              type="button"
+                              disabled={!isOwner || pendingAction === `pause:${entry.subscription_id}`}
+                              onClick={() => void ownerSubscriptionAction("pause", entry)}
+                            >
+                              Pause
+                            </button>
+                            <button
+                              className="btn muted"
+                              type="button"
+                              disabled={!isOwner || pendingAction === `sync:${entry.subscription_id}`}
+                              onClick={() => void ownerSubscriptionAction("sync", entry)}
+                            >
+                              Sync
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {businessSubscriptions.length === 0 && (
+                        <tr>
+                          <td colSpan={7}>No subscriptions matched the current filters.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          )}
+
+          {tab === "growth" && (
+            <section className="stack">
+              <article className="panel">
+                <h2>Signup → Paid funnel</h2>
+                {loadingTabData ? (
+                  <p className="subtle">Loading funnel…</p>
+                ) : (
+                  <div className="grid">
+                    <article className="panel metric">
+                      <span>Signups</span>
+                      <strong>{businessFunnel?.signups || 0}</strong>
+                    </article>
+                    <article className="panel metric">
+                      <span>Activated</span>
+                      <strong>{businessFunnel?.activated || 0}</strong>
+                    </article>
+                    <article className="panel metric">
+                      <span>Paid</span>
+                      <strong>{businessFunnel?.paid || 0}</strong>
+                    </article>
+                    <article className="panel metric">
+                      <span>Signup→Paid</span>
+                      <strong>{(businessFunnel?.signup_to_paid_pct || 0).toFixed(1)}%</strong>
+                    </article>
+                    <article className="panel metric">
+                      <span>Activation→Paid</span>
+                      <strong>{(businessFunnel?.activation_to_paid_pct || 0).toFixed(1)}%</strong>
+                    </article>
+                  </div>
+                )}
+              </article>
+              <article className="panel">
+                <h2>Cohort retention</h2>
+                {loadingTabData ? (
+                  <p className="subtle">Loading cohorts…</p>
+                ) : (
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Cohort</th>
+                          <th>Users</th>
+                          <th>Paid M0</th>
+                          <th>Paid M1</th>
+                          <th>Paid M2</th>
+                          <th>Retention M1</th>
+                          <th>Retention M2</th>
+                          <th>Churn buckets</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {businessCohorts.map((row) => (
+                          <tr key={row.cohort_month}>
+                            <td>{row.cohort_month}</td>
+                            <td>{row.users}</td>
+                            <td>{row.paid_month_0}</td>
+                            <td>{row.paid_month_1}</td>
+                            <td>{row.paid_month_2}</td>
+                            <td>{row.retention_month_1_pct.toFixed(1)}%</td>
+                            <td>{row.retention_month_2_pct.toFixed(1)}%</td>
+                            <td>
+                              early {row.churn_bucket_early}, middle {row.churn_bucket_middle}, late {row.churn_bucket_late}
+                            </td>
+                          </tr>
+                        ))}
+                        {businessCohorts.length === 0 && (
+                          <tr>
+                            <td colSpan={8}>No cohort rows available.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </article>
+            </section>
+          )}
+
+          {tab === "alerts" && (
+            <section className="stack">
+              <article className="grid">
+                <article className="panel metric">
+                  <span>Webhook lag</span>
+                  <strong>{businessOverview?.webhook_lag_minutes || 0} min</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Reconcile lag</span>
+                  <strong>{businessOverview?.reconcile_lag_minutes || 0} min</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Failed payments</span>
+                  <strong>{businessOverview?.failed_payments || 0}</strong>
+                </article>
+                <article className="panel metric">
+                  <span>Churn</span>
+                  <strong>{(businessOverview?.churn_rate_pct || 0).toFixed(1)}%</strong>
+                </article>
+              </article>
+              <article className="panel">
+                <h2>Anomaly cards</h2>
+                {loadingTabData ? (
+                  <p className="subtle">Loading alerts…</p>
+                ) : (
+                  <div className="stack">
+                    {businessAlerts.map((alert) => (
+                      <article key={alert.key} className={`alert-card ${alert.severity}`}>
+                        <h3>{alert.title}</h3>
+                        <p>{alert.description}</p>
+                        <p className="subtle">
+                          value: {alert.value} • threshold: {alert.threshold}
+                        </p>
+                      </article>
+                    ))}
+                    {businessAlerts.length === 0 && <p className="subtle">No active business alerts for the current window.</p>}
+                  </div>
+                )}
+              </article>
             </section>
           )}
         </>

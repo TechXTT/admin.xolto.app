@@ -8,6 +8,7 @@ export type User = {
   email: string;
   name: string;
   tier: string;
+  role?: "owner" | "operator" | "admin" | "";
   is_admin?: boolean;
 };
 
@@ -43,6 +44,7 @@ export type AdminUser = {
   email: string;
   name: string;
   tier: string;
+  role: string;
   is_admin: boolean;
   created_at: string;
   mission_count: number;
@@ -54,6 +56,7 @@ export type AdminUser = {
 export type AdminUsageEntry = {
   ID: number;
   UserID: string;
+  MissionID: number;
   CallType: string;
   Model: string;
   PromptTokens: number;
@@ -87,6 +90,84 @@ export type AdminSearchRun = {
   throttled: boolean;
   error_code: string;
   searches_avoided: number;
+};
+
+export type BusinessOverview = {
+  window_days: number;
+  mrr: number;
+  arr: number;
+  active_paid_accounts: number;
+  churn_rate_pct: number;
+  failed_payments: number;
+  revenue_eur_30d: number;
+  revenue_trend_pct: number;
+  subscriptions_total: number;
+  subscriptions_active: number;
+  webhook_lag_minutes: number;
+  reconcile_lag_minutes: number;
+};
+
+export type BusinessSubscription = {
+  subscription_id: string;
+  customer_id: string;
+  user_id: string;
+  user_email: string;
+  user_tier: string;
+  status: string;
+  plan_price_id: string;
+  plan_interval: string;
+  currency: string;
+  unit_amount: number;
+  quantity: number;
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  paused: boolean;
+  latest_invoice_id: string;
+  invoice_status: string;
+  amount_due: number;
+  amount_paid: number;
+  amount_remaining: number;
+  attempt_count: number;
+  updated_at: string;
+};
+
+export type BusinessRevenuePoint = {
+  bucket_start: string;
+  currency: string;
+  amount_paid: number;
+  invoices: number;
+};
+
+export type BusinessFunnel = {
+  window_days: number;
+  signups: number;
+  activated: number;
+  paid: number;
+  signup_to_paid_pct: number;
+  activation_to_paid_pct: number;
+};
+
+export type BusinessCohort = {
+  cohort_month: string;
+  users: number;
+  paid_month_0: number;
+  paid_month_1: number;
+  paid_month_2: number;
+  retention_month_1_pct: number;
+  retention_month_2_pct: number;
+  churn_bucket_early: number;
+  churn_bucket_middle: number;
+  churn_bucket_late: number;
+};
+
+export type BusinessAlert = {
+  key: string;
+  severity: string;
+  title: string;
+  description: string;
+  value: string;
+  threshold: string;
 };
 
 type AdminEnvelope<T> = {
@@ -256,9 +337,14 @@ export const api = {
         body: JSON.stringify({ tier }),
       })),
     updateUserAdmin: async (id: string, isAdmin: boolean) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; is_admin: boolean }>>(`/admin/users/${id}/admin`, {
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; is_admin: boolean; role: string }>>(`/admin/users/${id}/admin`, {
         method: "POST",
         body: JSON.stringify({ is_admin: isAdmin }),
+      })),
+    updateUserRole: async (id: string, role: "owner" | "operator" | "admin") =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; role: string }>>(`/admin/users/${id}/role`, {
+        method: "POST",
+        body: JSON.stringify({ role }),
       })),
     updateMissionStatus: async (id: number, status: "active" | "paused" | "completed") =>
       unwrapAdmin(await apiFetch<AdminEnvelope<{ mission: unknown }>>(`/admin/missions/${id}/status`, {
@@ -272,6 +358,61 @@ export const api = {
       })),
     runSearchNow: async (id: number) =>
       unwrapAdmin(await apiFetch<AdminEnvelope<{ search_id: number; message: string }>>(`/admin/searches/${id}/run`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })),
+    businessOverview: async (days = 30) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ overview: BusinessOverview; days: number }>>(`/admin/business/overview?days=${days}`)),
+    businessSubscriptions: async (params: {
+      limit?: number;
+      status?: string;
+      plan?: string;
+      user?: string;
+      country?: string;
+    }) => {
+      const query = new URLSearchParams();
+      if (params.limit) query.set("limit", String(params.limit));
+      if (params.status) query.set("status", params.status);
+      if (params.plan) query.set("plan", params.plan);
+      if (params.user) query.set("user", params.user);
+      if (params.country) query.set("country", params.country);
+      return unwrapAdmin(await apiFetch<AdminEnvelope<{ subscriptions: BusinessSubscription[] }>>(`/admin/business/subscriptions?${query.toString()}`));
+    },
+    businessRevenue: async (days = 30) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ points: BusinessRevenuePoint[]; days: number }>>(`/admin/business/revenue?days=${days}`)),
+    businessFunnel: async (days = 30) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ funnel: BusinessFunnel; days: number }>>(`/admin/business/funnel?days=${days}`)),
+    businessCohorts: async (months = 6) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ cohorts: BusinessCohort[]; months: number }>>(`/admin/business/cohorts?months=${months}`)),
+    businessAlerts: async (days = 7) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ alerts: BusinessAlert[]; days: number }>>(`/admin/business/alerts?days=${days}`)),
+    ownerUpdatePlan: async (subscriptionID: string, priceID: string) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/plan`, {
+        method: "POST",
+        body: JSON.stringify({ price_id: priceID }),
+      })),
+    ownerCancelAtPeriodEnd: async (subscriptionID: string) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/cancel`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })),
+    ownerResume: async (subscriptionID: string) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/resume`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })),
+    ownerPause: async (subscriptionID: string, behavior = "mark_uncollectible") =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/pause`, {
+        method: "POST",
+        body: JSON.stringify({ behavior }),
+      })),
+    ownerSyncSubscription: async (subscriptionID: string) =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/sync`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      })),
+    ownerReconcile: async () =>
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ run_id: number; summary: Record<string, unknown> }>>(`/admin/business/reconcile`, {
         method: "POST",
         body: JSON.stringify({}),
       })),

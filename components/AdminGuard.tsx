@@ -15,9 +15,11 @@ export default function AdminGuard({ children }: { children: ReactNode }) {
       try {
         const me = await api.auth.me();
         if (cancelled) return;
-        if (!me.is_admin) {
+        const role = (me.role || "").toLowerCase();
+        const hasAccess = Boolean(me.is_admin || role === "owner" || role === "operator" || role === "admin");
+        if (!hasAccess) {
           setUser(me);
-          setError("Admin access required for this application.");
+          setError("Operator or owner access required for this application.");
           return;
         }
         setUser(me);
@@ -57,7 +59,9 @@ export default function AdminGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (error || !user?.is_admin) {
+  const role = (user?.role || "").toLowerCase();
+  const hasAccess = Boolean(user?.is_admin || role === "owner" || role === "operator" || role === "admin");
+  if (error || !hasAccess) {
     return (
       <main className="screen-shell">
         <section className="panel blocked">
