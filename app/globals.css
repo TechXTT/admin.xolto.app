@@ -262,6 +262,74 @@ th {
   font-weight: 600;
 }
 
+.subtle-pill,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  background: #f8fbfa;
+}
+
+.badge-success {
+  color: #116b48;
+  border-color: #c7e8d8;
+  background: #ebf8f1;
+}
+
+.badge-warning {
+  color: #8a4d07;
+  border-color: #f3ddbd;
+  background: #fff7eb;
+}
+
+.badge-danger {
+  color: #8f1f1f;
+  border-color: #f0c8c8;
+  background: #fff0f0;
+}
+
+.alert-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fbfdfc;
+}
+
+.alert-card.warning {
+  border-color: #f2d39e;
+  background: #fffbf2;
+}
+
+.alert-card.danger {
+  border-color: #efc1c1;
+  background: #fff3f3;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 40;
+}
+
+.modal-card {
+  width: min(560px, 100%);
+}
+
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
 @media (max-width: 768px) {
   .admin-shell {
     padding: 14px;
