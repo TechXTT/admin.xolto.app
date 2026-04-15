@@ -1,32 +1,34 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { api } from "../../lib/api";
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { api } from '../../lib/api';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setError("");
+    setError('');
     setLoading(true);
     try {
       await api.auth.login(email, password);
       const me = await api.auth.me();
-      const role = (me.role || "").toLowerCase();
-      const hasAccess = Boolean(me.is_admin || role === "owner" || role === "operator" || role === "admin");
+      const role = (me.role || '').toLowerCase();
+      const hasAccess = Boolean(
+        me.is_admin || role === 'owner' || role === 'operator' || role === 'admin',
+      );
       if (!hasAccess) {
-        setError("This account does not have operator/owner access.");
+        setError('This account does not have operator/owner access.');
         setLoading(false);
         return;
       }
-      window.location.replace("/");
+      window.location.replace('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed.");
+      setError(err instanceof Error ? err.message : 'Login failed.');
       setLoading(false);
     }
   }
@@ -61,7 +63,7 @@ export default function LoginPage() {
             />
           </label>
           <button className="btn" type="submit" disabled={loading}>
-            {loading ? "Signing in…" : "Sign in"}
+            {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
       </section>

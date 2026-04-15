@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build",
-    "start": "next start -p 3002"
+    "start": "next start -p 3002",
+    "lint": "next lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "next": "14.2.0",
@@ -13,8 +17,13 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "@types/node": "25.5.2",
     "@types/react": "19.2.14",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.0",
+    "prettier": "^3.3.3",
     "typescript": "5.4.5"
   }
 }

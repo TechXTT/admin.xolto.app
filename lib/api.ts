@@ -1,14 +1,14 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-const ACCESS_TOKEN_KEY = "xolto_access_token";
-const REFRESH_TOKEN_KEY = "xolto_refresh_token";
+const ACCESS_TOKEN_KEY = 'xolto_access_token';
+const REFRESH_TOKEN_KEY = 'xolto_refresh_token';
 
 export type User = {
   id: string;
   email: string;
   name: string;
   tier: string;
-  role?: "owner" | "operator" | "admin" | "user" | "";
+  role?: 'owner' | 'operator' | 'admin' | 'user' | '';
   is_admin?: boolean;
 };
 
@@ -183,12 +183,12 @@ type ErrorPayload = {
 };
 
 function canUseStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
 
 export function getToken(): string {
-  if (!canUseStorage()) return "";
-  return window.localStorage.getItem(ACCESS_TOKEN_KEY) || "";
+  if (!canUseStorage()) return '';
+  return window.localStorage.getItem(ACCESS_TOKEN_KEY) || '';
 }
 
 export function setToken(token: string) {
@@ -201,8 +201,8 @@ export function setToken(token: string) {
 }
 
 function getRefreshToken(): string {
-  if (!canUseStorage()) return "";
-  return window.localStorage.getItem(REFRESH_TOKEN_KEY) || "";
+  if (!canUseStorage()) return '';
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY) || '';
 }
 
 function setRefreshToken(token: string) {
@@ -222,8 +222,8 @@ export function clearToken() {
 
 async function normalizeApiError(res: Response): Promise<string> {
   const fallback = `Request failed (${res.status})`;
-  const contentType = res.headers.get("content-type") || "";
-  if (contentType.includes("application/json")) {
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) {
     try {
       const payload = (await res.json()) as ErrorPayload;
       return payload.error || payload.message || payload.detail || fallback;
@@ -242,32 +242,35 @@ async function normalizeApiError(res: Response): Promise<string> {
 
 async function rawFetch(path: string, options?: RequestInit): Promise<Response> {
   const headers = new Headers(options?.headers || {});
-  if (!(options?.body instanceof FormData) && !headers.has("Content-Type")) {
-    headers.set("Content-Type", "application/json");
+  if (!(options?.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
-  if (!headers.has("Authorization")) {
+  if (!headers.has('Authorization')) {
     const token = getToken();
-    if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (token) headers.set('Authorization', `Bearer ${token}`);
   }
-  if (path === "/auth/refresh" && !headers.has("X-Refresh-Token")) {
+  if (path === '/auth/refresh' && !headers.has('X-Refresh-Token')) {
     const refreshToken = getRefreshToken();
-    if (refreshToken) headers.set("X-Refresh-Token", refreshToken);
+    if (refreshToken) headers.set('X-Refresh-Token', refreshToken);
   }
 
   return fetch(`${API_BASE}${path}`, {
     ...options,
-    credentials: "include",
+    credentials: 'include',
     headers,
   });
 }
 
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   let res = await rawFetch(path, options);
-  if (res.status === 401 && path !== "/auth/refresh" && path !== "/auth/login") {
-    const refreshRes = await rawFetch("/auth/refresh", { method: "POST" });
+  if (res.status === 401 && path !== '/auth/refresh' && path !== '/auth/login') {
+    const refreshRes = await rawFetch('/auth/refresh', { method: 'POST' });
     if (refreshRes.ok) {
       try {
-        const payload = (await refreshRes.clone().json()) as { access_token?: string; refresh_token?: string };
+        const payload = (await refreshRes.clone().json()) as {
+          access_token?: string;
+          refresh_token?: string;
+        };
         if (payload.access_token) setToken(payload.access_token);
         if (payload.refresh_token) setRefreshToken(payload.refresh_token);
       } catch {
@@ -283,7 +286,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 }
 
 function unwrapAdmin<T>(payload: AdminEnvelope<T>): T {
-  if (payload && typeof payload === "object" && payload.data) {
+  if (payload && typeof payload === 'object' && payload.data) {
     return payload.data;
   }
   return payload as T;
@@ -292,28 +295,39 @@ function unwrapAdmin<T>(payload: AdminEnvelope<T>): T {
 export const api = {
   auth: {
     login: async (email: string, password: string) => {
-      const response = await apiFetch<{ access_token: string; refresh_token?: string; user: User }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await apiFetch<{ access_token: string; refresh_token?: string; user: User }>(
+        '/auth/login',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, password }),
+        },
+      );
       setToken(response.access_token);
       if (response.refresh_token) setRefreshToken(response.refresh_token);
       return response;
     },
-    me: async () => apiFetch<User>("/users/me"),
+    me: async () => apiFetch<User>('/users/me'),
     logout: async () => {
-      const response = await apiFetch<{ ok: boolean }>("/auth/logout", { method: "POST" });
+      const response = await apiFetch<{ ok: boolean }>('/auth/logout', { method: 'POST' });
       clearToken();
       return response;
     },
   },
   admin: {
     stats: async (days = 30) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ stats: AdminAIStats; search_stats: AdminSearchStats; days: number }>>(`/admin/stats?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<
+          AdminEnvelope<{ stats: AdminAIStats; search_stats: AdminSearchStats; days: number }>
+        >(`/admin/stats?days=${days}`),
+      ),
     users: async () =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ users: AdminUser[] }>>("/admin/users")),
+      unwrapAdmin(await apiFetch<AdminEnvelope<{ users: AdminUser[] }>>('/admin/users')),
     usage: async (days = 7) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ entries: AdminUsageEntry[]; days: number }>>(`/admin/usage?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ entries: AdminUsageEntry[]; days: number }>>(
+          `/admin/usage?days=${days}`,
+        ),
+      ),
     searchRuns: async (params: {
       days?: number;
       limit?: number;
@@ -323,46 +337,81 @@ export const api = {
       user?: string;
     }) => {
       const query = new URLSearchParams();
-      if (params.days) query.set("days", String(params.days));
-      if (params.limit) query.set("limit", String(params.limit));
-      if (params.status) query.set("status", params.status);
-      if (params.marketplace) query.set("marketplace", params.marketplace);
-      if (params.country) query.set("country", params.country);
-      if (params.user) query.set("user", params.user);
-      return unwrapAdmin(await apiFetch<AdminEnvelope<{ entries: AdminSearchRun[]; days: number; limit: number }>>(`/admin/search-runs?${query.toString()}`));
+      if (params.days) query.set('days', String(params.days));
+      if (params.limit) query.set('limit', String(params.limit));
+      if (params.status) query.set('status', params.status);
+      if (params.marketplace) query.set('marketplace', params.marketplace);
+      if (params.country) query.set('country', params.country);
+      if (params.user) query.set('user', params.user);
+      return unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ entries: AdminSearchRun[]; days: number; limit: number }>>(
+          `/admin/search-runs?${query.toString()}`,
+        ),
+      );
     },
     updateUserTier: async (id: string, tier: string) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; tier: string }>>(`/admin/users/${id}/tier`, {
-        method: "POST",
-        body: JSON.stringify({ tier }),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ user_id: string; tier: string }>>(
+          `/admin/users/${id}/tier`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ tier }),
+          },
+        ),
+      ),
     updateUserAdmin: async (id: string, isAdmin: boolean) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; is_admin: boolean; role: string }>>(`/admin/users/${id}/admin`, {
-        method: "POST",
-        body: JSON.stringify({ is_admin: isAdmin }),
-      })),
-    updateUserRole: async (id: string, role: "owner" | "operator" | "admin" | "user") =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ user_id: string; role: string }>>(`/admin/users/${id}/role`, {
-        method: "POST",
-        body: JSON.stringify({ role }),
-      })),
-    updateMissionStatus: async (id: number, status: "active" | "paused" | "completed") =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ mission: unknown }>>(`/admin/missions/${id}/status`, {
-        method: "POST",
-        body: JSON.stringify({ status }),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ user_id: string; is_admin: boolean; role: string }>>(
+          `/admin/users/${id}/admin`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ is_admin: isAdmin }),
+          },
+        ),
+      ),
+    updateUserRole: async (id: string, role: 'owner' | 'operator' | 'admin' | 'user') =>
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ user_id: string; role: string }>>(
+          `/admin/users/${id}/role`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ role }),
+          },
+        ),
+      ),
+    updateMissionStatus: async (id: number, status: 'active' | 'paused' | 'completed') =>
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ mission: unknown }>>(`/admin/missions/${id}/status`, {
+          method: 'POST',
+          body: JSON.stringify({ status }),
+        }),
+      ),
     updateSearchEnabled: async (id: number, enabled: boolean) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ search_id: number; enabled: boolean }>>(`/admin/searches/${id}/enabled`, {
-        method: "POST",
-        body: JSON.stringify({ enabled }),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ search_id: number; enabled: boolean }>>(
+          `/admin/searches/${id}/enabled`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ enabled }),
+          },
+        ),
+      ),
     runSearchNow: async (id: number) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ search_id: number; message: string }>>(`/admin/searches/${id}/run`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ search_id: number; message: string }>>(
+          `/admin/searches/${id}/run`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      ),
     businessOverview: async (days = 30) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ overview: BusinessOverview; days: number }>>(`/admin/business/overview?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ overview: BusinessOverview; days: number }>>(
+          `/admin/business/overview?days=${days}`,
+        ),
+      ),
     businessSubscriptions: async (params: {
       limit?: number;
       status?: string;
@@ -371,50 +420,100 @@ export const api = {
       country?: string;
     }) => {
       const query = new URLSearchParams();
-      if (params.limit) query.set("limit", String(params.limit));
-      if (params.status) query.set("status", params.status);
-      if (params.plan) query.set("plan", params.plan);
-      if (params.user) query.set("user", params.user);
-      if (params.country) query.set("country", params.country);
-      return unwrapAdmin(await apiFetch<AdminEnvelope<{ subscriptions: BusinessSubscription[] }>>(`/admin/business/subscriptions?${query.toString()}`));
+      if (params.limit) query.set('limit', String(params.limit));
+      if (params.status) query.set('status', params.status);
+      if (params.plan) query.set('plan', params.plan);
+      if (params.user) query.set('user', params.user);
+      if (params.country) query.set('country', params.country);
+      return unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscriptions: BusinessSubscription[] }>>(
+          `/admin/business/subscriptions?${query.toString()}`,
+        ),
+      );
     },
     businessRevenue: async (days = 30) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ points: BusinessRevenuePoint[]; days: number }>>(`/admin/business/revenue?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ points: BusinessRevenuePoint[]; days: number }>>(
+          `/admin/business/revenue?days=${days}`,
+        ),
+      ),
     businessFunnel: async (days = 30) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ funnel: BusinessFunnel; days: number }>>(`/admin/business/funnel?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ funnel: BusinessFunnel; days: number }>>(
+          `/admin/business/funnel?days=${days}`,
+        ),
+      ),
     businessCohorts: async (months = 6) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ cohorts: BusinessCohort[]; months: number }>>(`/admin/business/cohorts?months=${months}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ cohorts: BusinessCohort[]; months: number }>>(
+          `/admin/business/cohorts?months=${months}`,
+        ),
+      ),
     businessAlerts: async (days = 7) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ alerts: BusinessAlert[]; days: number }>>(`/admin/business/alerts?days=${days}`)),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ alerts: BusinessAlert[]; days: number }>>(
+          `/admin/business/alerts?days=${days}`,
+        ),
+      ),
     ownerUpdatePlan: async (subscriptionID: string, priceID: string) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/plan`, {
-        method: "POST",
-        body: JSON.stringify({ price_id: priceID }),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(
+          `/admin/business/subscriptions/${subscriptionID}/plan`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ price_id: priceID }),
+          },
+        ),
+      ),
     ownerCancelAtPeriodEnd: async (subscriptionID: string) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/cancel`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(
+          `/admin/business/subscriptions/${subscriptionID}/cancel`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      ),
     ownerResume: async (subscriptionID: string) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/resume`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      })),
-    ownerPause: async (subscriptionID: string, behavior = "mark_uncollectible") =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/pause`, {
-        method: "POST",
-        body: JSON.stringify({ behavior }),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(
+          `/admin/business/subscriptions/${subscriptionID}/resume`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      ),
+    ownerPause: async (subscriptionID: string, behavior = 'mark_uncollectible') =>
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(
+          `/admin/business/subscriptions/${subscriptionID}/pause`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ behavior }),
+          },
+        ),
+      ),
     ownerSyncSubscription: async (subscriptionID: string) =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(`/admin/business/subscriptions/${subscriptionID}/sync`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ subscription: unknown; idempotency_key: string }>>(
+          `/admin/business/subscriptions/${subscriptionID}/sync`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      ),
     ownerReconcile: async () =>
-      unwrapAdmin(await apiFetch<AdminEnvelope<{ run_id: number; summary: Record<string, unknown> }>>(`/admin/business/reconcile`, {
-        method: "POST",
-        body: JSON.stringify({}),
-      })),
+      unwrapAdmin(
+        await apiFetch<AdminEnvelope<{ run_id: number; summary: Record<string, unknown> }>>(
+          `/admin/business/reconcile`,
+          {
+            method: 'POST',
+            body: JSON.stringify({}),
+          },
+        ),
+      ),
   },
 };
