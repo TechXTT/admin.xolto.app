@@ -59,12 +59,12 @@ function UsersTable({
             </tr>
           </thead>
           <tbody>
-            {users.map((entry) => (
+            {(users ?? []).map((entry) => (
               <tr key={entry.id}>
-                <td>{entry.email}</td>
+                <td>{entry.email ?? '—'}</td>
                 <td>
                   <select
-                    value={tierDrafts[entry.id] ?? entry.tier}
+                    value={tierDrafts[entry.id] ?? entry.tier ?? 'free'}
                     onChange={(event) => onTierDraftChange(entry.id, event.target.value)}
                   >
                     <option value="free">free</option>
@@ -96,9 +96,9 @@ function UsersTable({
                   </select>
                 </td>
                 <td>{entry.is_admin ? 'yes' : 'no'}</td>
-                <td>{entry.mission_count}</td>
-                <td>{entry.search_count}</td>
-                <td>{entry.ai_call_count}</td>
+                <td>{entry.mission_count ?? 0}</td>
+                <td>{entry.search_count ?? 0}</td>
+                <td>{entry.ai_call_count ?? 0}</td>
                 <td className="actions">
                   <button
                     className="btn"
@@ -127,7 +127,7 @@ function UsersTable({
                 </td>
               </tr>
             ))}
-            {users.length === 0 && (
+            {(users ?? []).length === 0 && (
               <tr>
                 <td colSpan={8}>
                   {productFirstRoleOption ? 'No product users found.' : 'No team users found.'}
@@ -153,10 +153,11 @@ export default function UsersTab({
   onApplyRole,
   onToggleAdmin,
 }: UsersTabProps) {
-  const teamUsers = users.filter(
+  const safeUsers = users ?? [];
+  const teamUsers = safeUsers.filter(
     (entry) => normalizeAdminRole(entry.role, entry.is_admin) !== 'user',
   );
-  const productUsers = users.filter(
+  const productUsers = safeUsers.filter(
     (entry) => normalizeAdminRole(entry.role, entry.is_admin) === 'user',
   );
 

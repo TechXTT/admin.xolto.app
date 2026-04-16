@@ -24,46 +24,46 @@ export default function OverviewTab({
     <section className="grid">
       <article className="panel metric">
         <span>Total users</span>
-        <strong>{usersCount.toLocaleString()}</strong>
+        <strong>{(usersCount ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>Active users</span>
-        <strong>{activeUsers.toLocaleString()}</strong>
+        <strong>{(activeUsers ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>AI users</span>
-        <strong>{usageUsers.toLocaleString()}</strong>
+        <strong>{(usageUsers ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>AI calls</span>
-        <strong>{stats?.TotalCalls.toLocaleString() || '0'}</strong>
+        <strong>{(stats?.TotalCalls ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>Estimated AI cost</span>
-        <strong>{formatUSD(stats?.EstimatedCostUSD || 0)}</strong>
+        <strong>{formatUSD(stats?.EstimatedCostUSD ?? 0)}</strong>
       </article>
       <article className="panel metric">
         <span>Search runs</span>
-        <strong>{searchStats?.total_runs.toLocaleString() || '0'}</strong>
+        <strong>{(searchStats?.total_runs ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>Search failures</span>
-        <strong>{searchStats?.failed_runs.toLocaleString() || '0'}</strong>
+        <strong>{(searchStats?.failed_runs ?? 0).toLocaleString()}</strong>
       </article>
       <article className="panel metric">
         <span>Failure rate</span>
-        <strong>{(searchStats?.failure_rate_pct || 0).toFixed(1)}%</strong>
+        <strong>{(searchStats?.failure_rate_pct ?? 0).toFixed(1)}%</strong>
       </article>
       {isOwner && (
         <article className="panel metric">
           <span>MRR (EUR)</span>
-          <strong>{formatEUR(businessOverview?.mrr || 0)}</strong>
+          <strong>{formatEUR(businessOverview?.mrr ?? 0)}</strong>
         </article>
       )}
       {isOwner && (
         <article className="panel metric">
           <span>Failed payments</span>
-          <strong>{businessOverview?.failed_payments || 0}</strong>
+          <strong>{businessOverview?.failed_payments ?? 0}</strong>
         </article>
       )}
     </section>

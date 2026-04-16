@@ -39,6 +39,8 @@ export default function SubscriptionsTab({
   onSubPriceDraftChange,
   onSubscriptionAction,
 }: SubscriptionsTabProps) {
+  const safeSubs = businessSubscriptions ?? [];
+
   return (
     <section className="panel">
       <h2>Subscriptions</h2>
@@ -94,20 +96,20 @@ export default function SubscriptionsTab({
               </tr>
             </thead>
             <tbody>
-              {businessSubscriptions.map((entry) => (
+              {safeSubs.map((entry) => (
                 <tr key={entry.subscription_id}>
-                  <td>{entry.subscription_id}</td>
+                  <td>{entry.subscription_id ?? '—'}</td>
                   <td>
-                    {entry.user_email || entry.user_id}
-                    <div className="muted-text">{entry.user_tier}</div>
+                    {entry.user_email || entry.user_id || '—'}
+                    <div className="muted-text">{entry.user_tier ?? '—'}</div>
                   </td>
                   <td>
-                    {entry.status}
+                    {entry.status ?? '—'}
                     {entry.paused && <div className="muted-text">paused collection</div>}
                   </td>
                   <td>
                     <input
-                      value={subPriceDrafts[entry.subscription_id] ?? entry.plan_price_id}
+                      value={subPriceDrafts[entry.subscription_id] ?? entry.plan_price_id ?? ''}
                       onChange={(event) =>
                         onSubPriceDraftChange(entry.subscription_id, event.target.value)
                       }
@@ -122,8 +124,8 @@ export default function SubscriptionsTab({
                   <td>
                     {entry.invoice_status || '—'}
                     <div className="muted-text">
-                      due {formatMinor(entry.amount_due, entry.currency)} / paid{' '}
-                      {formatMinor(entry.amount_paid, entry.currency)}
+                      due {formatMinor(entry.amount_due ?? 0, entry.currency ?? 'EUR')} / paid{' '}
+                      {formatMinor(entry.amount_paid ?? 0, entry.currency ?? 'EUR')}
                     </div>
                   </td>
                   <td className="actions">
@@ -170,7 +172,7 @@ export default function SubscriptionsTab({
                   </td>
                 </tr>
               ))}
-              {businessSubscriptions.length === 0 && (
+              {safeSubs.length === 0 && (
                 <tr>
                   <td colSpan={7}>No subscriptions matched the current filters.</td>
                 </tr>

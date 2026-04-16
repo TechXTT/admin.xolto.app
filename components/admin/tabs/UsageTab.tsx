@@ -22,15 +22,19 @@ export default function UsageTab({
   onUsageCallTypeFilterChange,
   onUsageFailuresOnlyChange,
 }: UsageTabProps) {
-  const usageFailures = usage.filter((entry) => !entry.Success).length;
-  const filteredUsage = usage.filter((entry) => {
+  const safeUsage = usage ?? [];
+  const usageFailures = safeUsage.filter((entry) => !entry.Success).length;
+  const filteredUsage = safeUsage.filter((entry) => {
     if (usageFailuresOnly && entry.Success) return false;
-    if (usageUserFilter && !entry.UserID.toLowerCase().includes(usageUserFilter.toLowerCase())) {
+    if (
+      usageUserFilter &&
+      !(entry.UserID ?? '').toLowerCase().includes(usageUserFilter.toLowerCase())
+    ) {
       return false;
     }
     if (
       usageCallTypeFilter &&
-      !entry.CallType.toLowerCase().includes(usageCallTypeFilter.toLowerCase())
+      !(entry.CallType ?? '').toLowerCase().includes(usageCallTypeFilter.toLowerCase())
     ) {
       return false;
     }
@@ -41,7 +45,7 @@ export default function UsageTab({
     <section className="panel">
       <h2>Usage log</h2>
       <p className="subtle">
-        {usage.length} events loaded, {usageFailures} failures.
+        {safeUsage.length} events loaded, {usageFailures} failures.
       </p>
       <div className="filter-row">
         <label className="inline-field">
@@ -89,12 +93,12 @@ export default function UsageTab({
               {filteredUsage.map((entry) => (
                 <tr key={entry.ID}>
                   <td>{formatDate(entry.CreatedAt)}</td>
-                  <td>{entry.UserID}</td>
-                  <td>{entry.MissionID > 0 ? `#${entry.MissionID}` : '—'}</td>
-                  <td>{entry.CallType}</td>
-                  <td>{entry.Model}</td>
-                  <td>{entry.TotalTokens.toLocaleString()}</td>
-                  <td>{entry.LatencyMs} ms</td>
+                  <td>{entry.UserID ?? '—'}</td>
+                  <td>{(entry.MissionID ?? 0) > 0 ? `#${entry.MissionID}` : '—'}</td>
+                  <td>{entry.CallType ?? '—'}</td>
+                  <td>{entry.Model ?? '—'}</td>
+                  <td>{(entry.TotalTokens ?? 0).toLocaleString()}</td>
+                  <td>{entry.LatencyMs ?? 0} ms</td>
                   <td>{entry.Success ? 'yes' : 'no'}</td>
                   <td>{entry.ErrorMsg || '—'}</td>
                 </tr>

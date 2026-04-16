@@ -11,24 +11,26 @@ export default function AlertsTab({
   businessOverview,
   businessAlerts,
 }: AlertsTabProps) {
+  const safeAlerts = businessAlerts ?? [];
+
   return (
     <section className="stack">
       <article className="grid">
         <article className="panel metric">
           <span>Webhook lag</span>
-          <strong>{businessOverview?.webhook_lag_minutes || 0} min</strong>
+          <strong>{businessOverview?.webhook_lag_minutes ?? 0} min</strong>
         </article>
         <article className="panel metric">
           <span>Reconcile lag</span>
-          <strong>{businessOverview?.reconcile_lag_minutes || 0} min</strong>
+          <strong>{businessOverview?.reconcile_lag_minutes ?? 0} min</strong>
         </article>
         <article className="panel metric">
           <span>Failed payments</span>
-          <strong>{businessOverview?.failed_payments || 0}</strong>
+          <strong>{businessOverview?.failed_payments ?? 0}</strong>
         </article>
         <article className="panel metric">
           <span>Churn</span>
-          <strong>{(businessOverview?.churn_rate_pct || 0).toFixed(1)}%</strong>
+          <strong>{(businessOverview?.churn_rate_pct ?? 0).toFixed(1)}%</strong>
         </article>
       </article>
       <article className="panel">
@@ -37,16 +39,16 @@ export default function AlertsTab({
           <p className="subtle">Loading alerts…</p>
         ) : (
           <div className="stack">
-            {businessAlerts.map((alert) => (
-              <article key={alert.key} className={`alert-card ${alert.severity}`}>
-                <h3>{alert.title}</h3>
-                <p>{alert.description}</p>
+            {safeAlerts.map((alert) => (
+              <article key={alert.key} className={`alert-card ${alert.severity ?? ''}`}>
+                <h3>{alert.title ?? 'Alert'}</h3>
+                <p>{alert.description ?? ''}</p>
                 <p className="subtle">
-                  value: {alert.value} • threshold: {alert.threshold}
+                  value: {alert.value ?? '—'} • threshold: {alert.threshold ?? '—'}
                 </p>
               </article>
             ))}
-            {businessAlerts.length === 0 && (
+            {safeAlerts.length === 0 && (
               <p className="subtle">No active business alerts for the current window.</p>
             )}
           </div>

@@ -61,9 +61,10 @@ export default function OperationsTab({
   onSubmitRunSearch,
   onRunNowFromRow,
 }: OperationsTabProps) {
+  const safeRuns = runs ?? [];
   const filteredRuns = runIncidentsOnly
-    ? runs.filter((entry) => entry.status !== 'success' || entry.error_code !== '')
-    : runs;
+    ? safeRuns.filter((entry) => entry.status !== 'success' || entry.error_code !== '')
+    : safeRuns;
 
   return (
     <section className="stack">
@@ -206,19 +207,19 @@ export default function OperationsTab({
                 {filteredRuns.map((entry) => (
                   <tr key={entry.id}>
                     <td>{formatDate(entry.started_at)}</td>
-                    <td>{entry.status}</td>
-                    <td>{entry.user_email || entry.user_id}</td>
+                    <td>{entry.status ?? '—'}</td>
+                    <td>{entry.user_email || entry.user_id || '—'}</td>
                     <td>
-                      {entry.search_name || `#${entry.search_config_id}`}
-                      <div className="muted-text">mission #{entry.mission_id}</div>
+                      {entry.search_name || `#${entry.search_config_id ?? '—'}`}
+                      <div className="muted-text">mission #{entry.mission_id ?? '—'}</div>
                     </td>
                     <td>
-                      {entry.marketplace_id} / {entry.country_code}
+                      {entry.marketplace_id ?? '—'} / {entry.country_code ?? '—'}
                     </td>
                     <td>
-                      {entry.results_found} results
+                      {entry.results_found ?? 0} results
                       <div className="muted-text">
-                        {entry.new_listings} new, {entry.deal_hits} hits
+                        {entry.new_listings ?? 0} new, {entry.deal_hits ?? 0} hits
                       </div>
                     </td>
                     <td>{entry.error_code || '—'}</td>

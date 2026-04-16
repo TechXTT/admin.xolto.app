@@ -21,23 +21,23 @@ export default function GrowthTab({
           <div className="grid">
             <article className="panel metric">
               <span>Signups</span>
-              <strong>{businessFunnel?.signups || 0}</strong>
+              <strong>{businessFunnel?.signups ?? 0}</strong>
             </article>
             <article className="panel metric">
               <span>Activated</span>
-              <strong>{businessFunnel?.activated || 0}</strong>
+              <strong>{businessFunnel?.activated ?? 0}</strong>
             </article>
             <article className="panel metric">
               <span>Paid</span>
-              <strong>{businessFunnel?.paid || 0}</strong>
+              <strong>{businessFunnel?.paid ?? 0}</strong>
             </article>
             <article className="panel metric">
               <span>Signup→Paid</span>
-              <strong>{(businessFunnel?.signup_to_paid_pct || 0).toFixed(1)}%</strong>
+              <strong>{(businessFunnel?.signup_to_paid_pct ?? 0).toFixed(1)}%</strong>
             </article>
             <article className="panel metric">
               <span>Activation→Paid</span>
-              <strong>{(businessFunnel?.activation_to_paid_pct || 0).toFixed(1)}%</strong>
+              <strong>{(businessFunnel?.activation_to_paid_pct ?? 0).toFixed(1)}%</strong>
             </article>
           </div>
         )}
@@ -62,22 +62,22 @@ export default function GrowthTab({
                 </tr>
               </thead>
               <tbody>
-                {businessCohorts.map((row) => (
+                {(businessCohorts ?? []).map((row) => (
                   <tr key={row.cohort_month}>
-                    <td>{row.cohort_month}</td>
-                    <td>{row.users}</td>
-                    <td>{row.paid_month_0}</td>
-                    <td>{row.paid_month_1}</td>
-                    <td>{row.paid_month_2}</td>
-                    <td>{row.retention_month_1_pct.toFixed(1)}%</td>
-                    <td>{row.retention_month_2_pct.toFixed(1)}%</td>
+                    <td>{row.cohort_month ?? '—'}</td>
+                    <td>{row.users ?? 0}</td>
+                    <td>{row.paid_month_0 ?? 0}</td>
+                    <td>{row.paid_month_1 ?? 0}</td>
+                    <td>{row.paid_month_2 ?? 0}</td>
+                    <td>{(row.retention_month_1_pct ?? 0).toFixed(1)}%</td>
+                    <td>{(row.retention_month_2_pct ?? 0).toFixed(1)}%</td>
                     <td>
-                      early {row.churn_bucket_early}, middle {row.churn_bucket_middle}, late{' '}
-                      {row.churn_bucket_late}
+                      early {row.churn_bucket_early ?? 0}, middle {row.churn_bucket_middle ?? 0}, late{' '}
+                      {row.churn_bucket_late ?? 0}
                     </td>
                   </tr>
                 ))}
-                {businessCohorts.length === 0 && (
+                {(businessCohorts ?? []).length === 0 && (
                   <tr>
                     <td colSpan={8}>No cohort rows available.</td>
                   </tr>
