@@ -72,8 +72,8 @@ export default function GrowthTab({
                     <td>{(row.retention_month_1_pct ?? 0).toFixed(1)}%</td>
                     <td>{(row.retention_month_2_pct ?? 0).toFixed(1)}%</td>
                     <td>
-                      early {row.churn_bucket_early ?? 0}, middle {row.churn_bucket_middle ?? 0}, late{' '}
-                      {row.churn_bucket_late ?? 0}
+                      early {row.churn_bucket_early ?? 0}, middle {row.churn_bucket_middle ?? 0},
+                      late {row.churn_bucket_late ?? 0}
                     </td>
                   </tr>
                 ))}

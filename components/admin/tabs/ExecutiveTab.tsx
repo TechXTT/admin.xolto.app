@@ -15,10 +15,7 @@ export default function ExecutiveTab({
   businessRevenue,
 }: ExecutiveTabProps) {
   const safeRevenue = businessRevenue ?? [];
-  const recurringRevenue = safeRevenue.reduce(
-    (sum, point) => sum + (point.amount_paid ?? 0),
-    0,
-  );
+  const recurringRevenue = safeRevenue.reduce((sum, point) => sum + (point.amount_paid ?? 0), 0);
 
   return (
     <section className="stack">
