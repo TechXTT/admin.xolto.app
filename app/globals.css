@@ -67,6 +67,7 @@ body {
 .tabs {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .tab {
@@ -78,6 +79,7 @@ body {
   padding: 8px 14px;
   text-transform: capitalize;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .tab.active {
@@ -214,12 +216,13 @@ select {
 
 .table-wrap {
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 860px;
+  min-width: 680px;
 }
 
 th,
@@ -242,6 +245,7 @@ th {
 .actions {
   display: flex;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .muted-text,
@@ -330,6 +334,18 @@ th {
   gap: 12px;
 }
 
+/* -- Responsive: tablet and below -- */
+
+@media (max-width: 1024px) {
+  .admin-shell {
+    padding: 16px;
+  }
+
+  .topbar-controls {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 768px) {
   .admin-shell {
     padding: 14px;
@@ -338,5 +354,74 @@ th {
   .topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .topbar-controls {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .table-wrap {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    scrollbar-width: thin;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ops-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .topbar h1 {
+    font-size: 1.4rem;
+  }
+
+  .metric strong {
+    font-size: 1.1rem;
+  }
+
+  .tab {
+    padding: 6px 10px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-shell {
+    padding: 10px;
+  }
+
+  .panel {
+    padding: 12px;
+    border-radius: 12px;
+  }
+
+  .filter-row {
+    flex-direction: column;
+  }
+
+  .inline-field {
+    width: 100%;
+  }
+
+  th,
+  td {
+    padding: 7px 8px;
+    font-size: 0.82rem;
+  }
+
+  table {
+    min-width: 580px;
   }
 }
