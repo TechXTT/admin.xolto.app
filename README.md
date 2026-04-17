@@ -52,16 +52,16 @@ Auth is cookie-based (`credentials: include`). There is no local token state;
 The dashboard renders one of eight tabs at a time. Owner-only tabs are hidden
 from non-owner admin/operator sessions.
 
-| Tab | File | Access | Purpose |
-| --- | --- | --- | --- |
-| `overview` | `components/admin/tabs/OverviewTab.tsx` | admin + | System-wide snapshot of users, missions, searches and scoring. |
-| `users` | `components/admin/tabs/UsersTab.tsx` | admin + | User table with role, tier, `is_admin`, created_at and per-user usage counters; inline tier/role edits. |
-| `operations` | `components/admin/tabs/OperationsTab.tsx` | admin + | Worker/scraper/scoring-pipeline health, recent search runs, mission/search controls, run-now triggers. |
-| `usage` | `components/admin/tabs/UsageTab.tsx` | admin + | AI reasoner + feature usage per user with call-type and failure filters. |
-| `executive` | `components/admin/tabs/ExecutiveTab.tsx` | owner only | Top-level business KPIs: MRR, ARR, paid accounts, churn, revenue trend. |
-| `subscriptions` | `components/admin/tabs/SubscriptionsTab.tsx` | owner only | Stripe subscription list with plan/cancel/resume/pause/sync actions and reconcile. |
-| `growth` | `components/admin/tabs/GrowthTab.tsx` | owner only | Acquisition + activation funnel and monthly retention cohorts. |
-| `alerts` | `components/admin/tabs/AlertsTab.tsx` | owner only | Business alerts (payment failures, webhook lag, reconcile lag, anomalies). |
+| Tab             | File                                         | Access     | Purpose                                                                                                 |
+| --------------- | -------------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------- |
+| `overview`      | `components/admin/tabs/OverviewTab.tsx`      | admin +    | System-wide snapshot of users, missions, searches and scoring.                                          |
+| `users`         | `components/admin/tabs/UsersTab.tsx`         | admin +    | User table with role, tier, `is_admin`, created_at and per-user usage counters; inline tier/role edits. |
+| `operations`    | `components/admin/tabs/OperationsTab.tsx`    | admin +    | Worker/scraper/scoring-pipeline health, recent search runs, mission/search controls, run-now triggers.  |
+| `usage`         | `components/admin/tabs/UsageTab.tsx`         | admin +    | AI reasoner + feature usage per user with call-type and failure filters.                                |
+| `executive`     | `components/admin/tabs/ExecutiveTab.tsx`     | owner only | Top-level business KPIs: MRR, ARR, paid accounts, churn, revenue trend.                                 |
+| `subscriptions` | `components/admin/tabs/SubscriptionsTab.tsx` | owner only | Stripe subscription list with plan/cancel/resume/pause/sync actions and reconcile.                      |
+| `growth`        | `components/admin/tabs/GrowthTab.tsx`        | owner only | Acquisition + activation funnel and monthly retention cohorts.                                          |
+| `alerts`        | `components/admin/tabs/AlertsTab.tsx`        | owner only | Business alerts (payment failures, webhook lag, reconcile lag, anomalies).                              |
 
 Owner-gating happens in `AdminDashboard.tsx`: `isOwner = role === 'owner'`
 restricts the tab list. If you add a tab, update this table and update the
@@ -111,13 +111,13 @@ A PR that introduces a raw `.map` on a possibly-undefined array, or a
 Only variables actually read by the code are listed. Do not add speculative
 vars here.
 
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `NEXT_PUBLIC_API_URL` | yes in prod | `http://localhost:8000` | Base URL for the `markt` backend. Set to `https://api.xolto.app` for staging/prod. Read by `lib/api.ts`. |
-| `NEXT_PUBLIC_SENTRY_DSN` | no | unset | Sentry DSN for client, edge and server runtimes. When unset, Sentry initialises as a silent no-op. |
-| `NEXT_PUBLIC_GIT_SHA` | no | unset | Local override for the release identifier used by Sentry; normally Vercel supplies the SHA automatically. |
-| `VERCEL_GIT_COMMIT_SHA` | auto | set by Vercel | Populated by the Vercel build; feeds `NEXT_PUBLIC_RELEASE`. |
-| `NEXT_PUBLIC_RELEASE` | auto | derived | Resolved by `next.config.mjs` from `VERCEL_GIT_COMMIT_SHA` → `NEXT_PUBLIC_GIT_SHA` → `dev`. Tagged on Sentry events. |
+| Variable                 | Required    | Default                 | Purpose                                                                                                              |
+| ------------------------ | ----------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_API_URL`    | yes in prod | `http://localhost:8000` | Base URL for the `markt` backend. Set to `https://api.xolto.app` for staging/prod. Read by `lib/api.ts`.             |
+| `NEXT_PUBLIC_SENTRY_DSN` | no          | unset                   | Sentry DSN for client, edge and server runtimes. When unset, Sentry initialises as a silent no-op.                   |
+| `NEXT_PUBLIC_GIT_SHA`    | no          | unset                   | Local override for the release identifier used by Sentry; normally Vercel supplies the SHA automatically.            |
+| `VERCEL_GIT_COMMIT_SHA`  | auto        | set by Vercel           | Populated by the Vercel build; feeds `NEXT_PUBLIC_RELEASE`.                                                          |
+| `NEXT_PUBLIC_RELEASE`    | auto        | derived                 | Resolved by `next.config.mjs` from `VERCEL_GIT_COMMIT_SHA` → `NEXT_PUBLIC_GIT_SHA` → `dev`. Tagged on Sentry events. |
 
 `NEXT_RUNTIME` is read by `instrumentation.ts` but is set by the Next.js
 runtime itself; do not set it manually.
