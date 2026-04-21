@@ -167,6 +167,47 @@ export type BusinessAlert = {
   threshold: string;
 };
 
+// VAL-1b — Calibration dashboard types
+
+export type CalibrationVerdictCounts = {
+  buy?: number;
+  negotiate?: number;
+  ask_seller?: number;
+  skip?: number;
+};
+
+export type CalibrationConfidenceHistogram = {
+  buy?: Record<string, number>;
+  negotiate?: Record<string, number>;
+  ask_seller?: Record<string, number>;
+  skip?: Record<string, number>;
+};
+
+export type CalibrationFairPriceDelta = {
+  buy?: Record<string, number>;
+  negotiate?: Record<string, number>;
+  ask_seller?: Record<string, number>;
+  skip?: Record<string, number>;
+};
+
+export type CalibrationOutcomeAttribution = {
+  unknown?: number;
+  sent?: number;
+  replied?: number;
+  won?: number;
+  lost?: number;
+};
+
+export type CalibrationSummary = {
+  window_days: number;
+  marketplace: string;
+  total_events: number;
+  verdict_counts: CalibrationVerdictCounts;
+  confidence_histogram: CalibrationConfidenceHistogram;
+  fair_price_delta: CalibrationFairPriceDelta;
+  outcome_attribution: CalibrationOutcomeAttribution;
+};
+
 type AdminEnvelope<T> = {
   ok?: boolean;
   error?: string;
@@ -463,5 +504,15 @@ export const api = {
           },
         ),
       ),
+    calibrationSummary: async (params: { window?: string; marketplace?: string }) => {
+      const query = new URLSearchParams();
+      if (params.window) query.set('window', params.window);
+      if (params.marketplace && params.marketplace !== 'all')
+        query.set('marketplace', params.marketplace);
+      const qs = query.toString();
+      return apiFetch<{ ok: boolean; summary: CalibrationSummary }>(
+        `/internal/calibration/summary${qs ? `?${qs}` : ''}`,
+      );
+    },
   },
 };
