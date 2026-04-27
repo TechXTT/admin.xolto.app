@@ -190,13 +190,15 @@ export type CalibrationFairPriceDelta = {
   skip?: Record<string, number>;
 };
 
-export type CalibrationOutcomeAttribution = {
-  unknown?: number;
-  sent?: number;
-  replied?: number;
-  won?: number;
-  lost?: number;
-};
+// Outcome attribution is a free-form bag of counts keyed by the raw outreach
+// state that markt's `CalibrationSummary.OutcomeAttribution` emits (see
+// markt/internal/store/calibration.go). The store joins scoring_events to
+// outreach_threads and increments the bucket named by `COALESCE(state, 'unknown')`,
+// so observed keys can include any of: `unknown`, `none`, `awaiting_reply`,
+// `sent`, `replied`, `stale`, `won`, `lost`. The CalibrationTab consumer
+// classifies these into the canonical `acted | skipped | unknown` UI buckets
+// and surfaces anything unrecognised in an "other" bucket.
+export type CalibrationOutcomeAttribution = Record<string, number>;
 
 export type CalibrationSummary = {
   window_days: number;
@@ -206,6 +208,31 @@ export type CalibrationSummary = {
   confidence_histogram: CalibrationConfidenceHistogram;
   fair_price_delta: CalibrationFairPriceDelta;
   outcome_attribution: CalibrationOutcomeAttribution;
+};
+
+// W19-23 Phase 2 — AI budget snapshot/override types.
+// Sourced from markt's GET /admin/ai-budget/snapshot and POST
+// /admin/ai-budget/override (operator-or-owner auth). See markt Phase 1
+// shipping notes; the contract here is canonical and should not drift.
+
+export type AIBudgetOverride = {
+  set_at: string;
+  new_cap_usd: number;
+  reason: string;
+  set_by_user_id?: string;
+};
+
+export type AIBudgetSnapshot = {
+  rolling_24h_spend_usd: number;
+  cap_usd: number;
+  percentage: number;
+  oldest_entry_at: string | null;
+  warning_tiers_fired: {
+    '70': string | null;
+    '90': string | null;
+    '100': string | null;
+  };
+  recent_overrides: AIBudgetOverride[];
 };
 
 type AdminEnvelope<T> = {
@@ -504,15 +531,36 @@ export const api = {
           },
         ),
       ),
-    calibrationSummary: async (params: { window?: string; marketplace?: string }) => {
+    calibrationSummary: async (params: {
+      window?: string;
+      marketplace?: string;
+      includeHeuristicFallback?: boolean;
+    }) => {
       const query = new URLSearchParams();
       if (params.window) query.set('window', params.window);
       if (params.marketplace && params.marketplace !== 'all')
         query.set('marketplace', params.marketplace);
+      // W19-23 Phase 2 — Default markt server behaviour excludes
+      // ai_path=heuristic_fallback rows. Only pass the param when the
+      // operator explicitly opts in. Sending `false` would be redundant
+      // (matches default) but harmless; we omit it to keep the URL clean.
+      if (params.includeHeuristicFallback) {
+        query.set('include_heuristic_fallback', 'true');
+      }
       const qs = query.toString();
       return apiFetch<{ ok: boolean; summary: CalibrationSummary }>(
         `/internal/calibration/summary${qs ? `?${qs}` : ''}`,
       );
     },
+    aiBudgetSnapshot: async () =>
+      apiFetch<AIBudgetSnapshot>('/admin/ai-budget/snapshot'),
+    aiBudgetOverride: async (body: { new_cap_usd: number; reason: string }) =>
+      apiFetch<{ ok: boolean; cap_usd: number; set_at: string }>(
+        '/admin/ai-budget/override',
+        {
+          method: 'POST',
+          body: JSON.stringify(body),
+        },
+      ),
   },
 };

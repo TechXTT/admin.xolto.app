@@ -18,7 +18,9 @@ import {
   User,
 } from '../lib/api';
 import { activeUsersCount, normalizeAdminRole, Tab, usageUsersCount } from './admin/format';
+import AIBudgetTab from './admin/tabs/AIBudgetTab';
 import AlertsTab from './admin/tabs/AlertsTab';
+import CalibrationTab from './admin/tabs/CalibrationTab';
 import ExecutiveTab from './admin/tabs/ExecutiveTab';
 import GrowthTab from './admin/tabs/GrowthTab';
 import OperationsTab from './admin/tabs/OperationsTab';
@@ -82,7 +84,15 @@ export default function AdminDashboard() {
   const tabs: Tab[] = useMemo(() => {
     const base: Tab[] = ['overview', 'users', 'operations', 'usage'];
     if (isOwner) {
-      return [...base, 'executive', 'subscriptions', 'growth', 'alerts'];
+      return [
+        ...base,
+        'executive',
+        'subscriptions',
+        'growth',
+        'alerts',
+        'calibration',
+        'ai-budget',
+      ];
     }
     return base;
   }, [isOwner]);
@@ -640,6 +650,10 @@ export default function AdminDashboard() {
               businessAlerts={businessAlerts}
             />
           )}
+
+          {tab === 'calibration' && <CalibrationTab isOwner={isOwner} />}
+
+          {tab === 'ai-budget' && <AIBudgetTab isOwner={isOwner} />}
         </>
       )}
     </main>
