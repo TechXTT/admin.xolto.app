@@ -412,8 +412,7 @@ export default function CalibrationTab({ isOwner }: CalibrationTabProps) {
         setSummary(res?.summary ?? null);
         setFetched(true);
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to load calibration summary.';
+        const message = err instanceof Error ? err.message : 'Failed to load calibration summary.';
         // apiFetch surfaces "Request failed (NNN)" — pluck the status code if present.
         const match = /\((\d{3})\)/.exec(message);
         setErrorStatus(match ? Number(match[1]) : null);
@@ -442,8 +441,7 @@ export default function CalibrationTab({ isOwner }: CalibrationTabProps) {
     );
   }
 
-  const totalEvents =
-    summary && Number.isFinite(summary.total_events) ? summary.total_events : 0;
+  const totalEvents = summary && Number.isFinite(summary.total_events) ? summary.total_events : 0;
   const isEmpty = fetched && !loading && !error && totalEvents === 0;
   const showData = !loading && !error && summary && totalEvents > 0;
 
@@ -538,9 +536,9 @@ export default function CalibrationTab({ isOwner }: CalibrationTabProps) {
             <span>Include heuristic-fallback rows</span>
           </label>
           <p className="subtle" style={{ margin: 0, fontSize: '0.8rem' }}>
-            Heuristic-fallback rows are scoring events created during AI-budget cap-fire. They
-            are excluded from calibration measurements by default — enabling this shows ALL
-            rows including the fallback path.
+            Heuristic-fallback rows are scoring events created during AI-budget cap-fire. They are
+            excluded from calibration measurements by default — enabling this shows ALL rows
+            including the fallback path.
           </p>
         </div>
       </article>
@@ -600,10 +598,7 @@ export default function CalibrationTab({ isOwner }: CalibrationTabProps) {
 
       {showData && summary && (
         <>
-          <VerdictDistribution
-            counts={summary.verdict_counts}
-            totalEvents={totalEvents}
-          />
+          <VerdictDistribution counts={summary.verdict_counts} totalEvents={totalEvents} />
           <PerVerdictHistograms
             title="Confidence histogram"
             subtitle="Count of events per confidence bucket, by verdict."

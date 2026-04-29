@@ -264,9 +264,7 @@ export default function AIBudgetTile({ state }: AIBudgetTileProps) {
         }}
       >
         <span className="subtle" style={{ fontSize: '0.85rem' }}>
-          {oldestRel
-            ? `oldest entry: ${oldestRel}`
-            : 'no spend in current window.'}
+          {oldestRel ? `oldest entry: ${oldestRel}` : 'no spend in current window.'}
         </span>
         {activeOverride && (
           <span

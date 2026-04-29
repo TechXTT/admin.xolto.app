@@ -16,9 +16,7 @@ import type { WiringStatus } from './WiringBadge';
 // ---------------------------------------------------------------------------
 
 function deriveWiringTone(status: WiringStatus): 'success' | 'danger' {
-  return status.trackerPresent && status.auditTableReady && !status.error
-    ? 'success'
-    : 'danger';
+  return status.trackerPresent && status.auditTableReady && !status.error ? 'success' : 'danger';
 }
 
 function deriveWiringLabel(status: WiringStatus): string {

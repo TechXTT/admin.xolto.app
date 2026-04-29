@@ -36,7 +36,10 @@ export function formatDate(value: string) {
 // Returns strings like "just now", "47 minutes ago", "2 hours ago",
 // "3 days ago". Returns null when input is null/empty/invalid so callers
 // can decide their fallback copy ("no spend in current window.").
-export function formatRelativeTime(value: string | null | undefined, now: Date = new Date()): string | null {
+export function formatRelativeTime(
+  value: string | null | undefined,
+  now: Date = new Date(),
+): string | null {
   if (!value) return null;
   const then = new Date(value);
   if (Number.isNaN(then.getTime())) return null;

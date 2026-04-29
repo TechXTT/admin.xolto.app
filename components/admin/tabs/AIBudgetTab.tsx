@@ -64,21 +64,19 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
     );
   }
 
-  const cap = Number.isFinite(snapshot?.cap_usd) && (snapshot?.cap_usd ?? 0) > 0
-    ? (snapshot!.cap_usd as number)
-    : 0;
+  const cap =
+    Number.isFinite(snapshot?.cap_usd) && (snapshot?.cap_usd ?? 0) > 0
+      ? (snapshot!.cap_usd as number)
+      : 0;
   const spend = Number.isFinite(snapshot?.rolling_24h_spend_usd)
     ? (snapshot!.rolling_24h_spend_usd as number)
     : 0;
   const pct = Number.isFinite(snapshot?.percentage) ? (snapshot!.percentage as number) : null;
   const severity = severityForPercentage(pct);
-  const overrides = Array.isArray(snapshot?.recent_overrides)
-    ? snapshot!.recent_overrides
-    : [];
+  const overrides = Array.isArray(snapshot?.recent_overrides) ? snapshot!.recent_overrides : [];
 
   const parsedCap = Number(capInput);
-  const capValid =
-    Number.isFinite(parsedCap) && parsedCap >= MIN_CAP && parsedCap <= MAX_CAP;
+  const capValid = Number.isFinite(parsedCap) && parsedCap >= MIN_CAP && parsedCap <= MAX_CAP;
   const reasonTrimmed = reasonInput.trim();
   const reasonValid = reasonTrimmed.length >= MIN_REASON_LEN;
   const formValid = capValid && reasonValid;
@@ -114,8 +112,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
       setConfirmOpen(false);
       await state.refresh();
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Failed to set override.';
+      const message = err instanceof Error ? err.message : 'Failed to set override.';
       setSubmitError(message);
     } finally {
       setSubmitting(false);
@@ -128,8 +125,8 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
         <p className="eyebrow">W19-23 Phase 2 — owner only</p>
         <h2 style={{ margin: '4px 0 0' }}>AI Budget</h2>
         <p className="subtle" style={{ margin: '4px 0 0' }}>
-          Rolling 24h AI-spend cap. Per-call-site graceful degradation, Sentry alerting, and
-          owner override.
+          Rolling 24h AI-spend cap. Per-call-site graceful degradation, Sentry alerting, and owner
+          override.
         </p>
       </article>
 
@@ -140,9 +137,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
       <article className="panel">
         <h2 style={{ marginBottom: 4 }}>Current state</h2>
         <p className="subtle" style={{ marginTop: 0 }}>
-          {snapshotError
-            ? snapshotError
-            : 'Snapshot polled every 60s while this tab is mounted.'}
+          {snapshotError ? snapshotError : 'Snapshot polled every 60s while this tab is mounted.'}
         </p>
         <div
           style={{
@@ -182,6 +177,49 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
         </div>
       </article>
 
+      {/* Per-call-site spend breakdown — W19-25 */}
+      <article className="panel">
+        <h2 style={{ marginBottom: 4 }}>Per-call-site spend (rolling 24h)</h2>
+        <p className="subtle" style={{ marginTop: 0 }}>
+          Where the rolling-24h cap budget is being consumed. Sorted by spend desc. Reset on process
+          restart.
+        </p>
+        {(() => {
+          const entries = Object.entries(snapshot?.per_site_spend_usd ?? {}).sort(
+            (a, b) => b[1] - a[1],
+          );
+          if (entries.length === 0) {
+            return (
+              <p className="subtle" style={{ marginTop: 12, fontStyle: 'italic' }}>
+                No per-site spend recorded in the last 24h.
+              </p>
+            );
+          }
+          return (
+            <div className="table-wrap" style={{ marginTop: 12 }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Call site</th>
+                    <th>Spend (USD)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map(([site, spend]) => (
+                    <tr key={site}>
+                      <td>{site || '—'}</td>
+                      <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                        {formatUSD(spend ?? 0)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
+      </article>
+
       {/* Override form — guardrail copy first, form second. */}
       <article className="panel">
         <h2 style={{ marginBottom: 4 }}>Override cap</h2>
@@ -195,8 +233,8 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
             padding: 10,
           }}
         >
-          The $3/day cap is founder-locked per Decision Log 2026-04-27. Override only when
-          explicit founder approval received. Reason field is mandatory and audit-logged.
+          The $3/day cap is founder-locked per Decision Log 2026-04-27. Override only when explicit
+          founder approval received. Reason field is mandatory and audit-logged.
         </p>
 
         <div
@@ -319,9 +357,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
                       </div>
                     </td>
                     <td style={{ fontVariantNumeric: 'tabular-nums' }}>
-                      {formatUSD(
-                        Number.isFinite(entry.new_cap_usd) ? entry.new_cap_usd : 0,
-                      )}
+                      {formatUSD(Number.isFinite(entry.new_cap_usd) ? entry.new_cap_usd : 0)}
                     </td>
                     <td>{entry.reason || '—'}</td>
                     <td className="muted-text">{entry.set_by_user_id ?? '—'}</td>
