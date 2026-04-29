@@ -1,6 +1,7 @@
 import { AdminAIStats, AdminSearchStats, BusinessOverview } from '../../../lib/api';
 import AIBudgetTile, { useAIBudgetSnapshot } from '../AIBudgetTile';
 import FuseWidget from '../FuseWidget';
+import WiringBadge from '../WiringBadge';
 import { formatEUR, formatUSD } from '../format';
 
 type OverviewTabProps = {
@@ -31,6 +32,7 @@ export default function OverviewTab({
     <div className="stack">
       <FuseWidget />
       {isOwner && <AIBudgetTile state={aiBudgetState} />}
+      <WiringBadge />
       <section className="grid">
         <article className="panel metric">
           <span>Total users</span>
