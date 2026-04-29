@@ -232,6 +232,7 @@ export type AIBudgetSnapshot = {
     '90': string | null;
     '100': string | null;
   };
+  per_site_spend_usd?: Record<string, number>;
   recent_overrides: AIBudgetOverride[];
 };
 
@@ -552,15 +553,11 @@ export const api = {
         `/internal/calibration/summary${qs ? `?${qs}` : ''}`,
       );
     },
-    aiBudgetSnapshot: async () =>
-      apiFetch<AIBudgetSnapshot>('/admin/ai-budget/snapshot'),
+    aiBudgetSnapshot: async () => apiFetch<AIBudgetSnapshot>('/admin/ai-budget/snapshot'),
     aiBudgetOverride: async (body: { new_cap_usd: number; reason: string }) =>
-      apiFetch<{ ok: boolean; cap_usd: number; set_at: string }>(
-        '/admin/ai-budget/override',
-        {
-          method: 'POST',
-          body: JSON.stringify(body),
-        },
-      ),
+      apiFetch<{ ok: boolean; cap_usd: number; set_at: string }>('/admin/ai-budget/override', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
   },
 };
