@@ -6,7 +6,7 @@ Stripe subscription tooling for owners and operators.
 
 xolto-admin is one of four xolto repos:
 
-- `markt` — backend, Railway, `api.xolto.app`
+- `markt` — backend, Railway, `app.xolto.app`
 - `xolto-app` — primary user dashboard, Vercel, `dash.xolto.app`
 - `xolto-landing` — marketing site, Vercel, `www.xolto.app`
 - `xolto-admin` — this repo, Vercel, **admin-gated**
@@ -31,7 +31,7 @@ production incident.
 
 1. `pnpm dev` starts the app on `http://localhost:3002`.
 2. Point `NEXT_PUBLIC_API_URL` at the backend you want to hit —
-   `https://api.xolto.app` for staging/prod, or your local `markt` backend on
+   `https://app.xolto.app` for staging/prod, or your local `markt` backend on
    `http://localhost:8000`.
 3. Visit `http://localhost:3002/login` and sign in with an account that has
    `is_admin = true` or `role` in `{owner, operator, admin}`.
@@ -101,7 +101,7 @@ A PR that introduces a raw `.map` on a possibly-undefined array, or a
 ## Deploy target
 
 - Production deploys to Vercel behind an admin-gated project.
-- Default backend is `https://api.xolto.app` (Railway, see the `markt`
+- Default backend is `https://app.xolto.app` (Railway, see the `markt`
   repo).
 - Vercel auto-populates `VERCEL_GIT_COMMIT_SHA`, which feeds
   `NEXT_PUBLIC_RELEASE` via `next.config.mjs`.
@@ -113,7 +113,7 @@ vars here.
 
 | Variable                 | Required    | Default                 | Purpose                                                                                                              |
 | ------------------------ | ----------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_API_URL`    | yes in prod | `http://localhost:8000` | Base URL for the `markt` backend. Set to `https://api.xolto.app` for staging/prod. Read by `lib/api.ts`.             |
+| `NEXT_PUBLIC_API_URL`    | yes in prod | `http://localhost:8000` | Base URL for the `markt` backend. Set to `https://app.xolto.app` for staging/prod. Read by `lib/api.ts`.             |
 | `NEXT_PUBLIC_SENTRY_DSN` | no          | unset                   | Sentry DSN for client, edge and server runtimes. When unset, Sentry initialises as a silent no-op.                   |
 | `NEXT_PUBLIC_GIT_SHA`    | no          | unset                   | Local override for the release identifier used by Sentry; normally Vercel supplies the SHA automatically.            |
 | `VERCEL_GIT_COMMIT_SHA`  | auto        | set by Vercel           | Populated by the Vercel build; feeds `NEXT_PUBLIC_RELEASE`.                                                          |
@@ -137,7 +137,7 @@ runtime itself; do not set it manually.
 ```bash
 pnpm install
 cp .env.example .env.local
-# edit .env.local: point NEXT_PUBLIC_API_URL at staging (https://api.xolto.app)
+# edit .env.local: point NEXT_PUBLIC_API_URL at staging (https://app.xolto.app)
 # or your local markt backend (http://localhost:8000)
 pnpm dev
 ```
