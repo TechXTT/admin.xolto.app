@@ -222,6 +222,11 @@ export type AIBudgetOverride = {
   set_by_user_id?: string;
 };
 
+export type AIBudgetOverridesListResponse = {
+  overrides: (AIBudgetOverride & { id: number })[];
+  next_cursor: number;
+};
+
 export type AIBudgetSnapshot = {
   rolling_24h_spend_usd: number;
   cap_usd: number;
@@ -559,5 +564,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(body),
       }),
+    aiBudgetOverridesList: async (params?: { limit?: number; cursor?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit !== undefined) qs.set('limit', String(params.limit));
+      if (params?.cursor !== undefined && params.cursor > 0)
+        qs.set('cursor', String(params.cursor));
+      const suffix = qs.toString();
+      return apiFetch<AIBudgetOverridesListResponse>(
+        `/admin/ai-budget/overrides${suffix ? `?${suffix}` : ''}`,
+      );
+    },
   },
 };

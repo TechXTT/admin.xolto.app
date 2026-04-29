@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { api } from '../../../lib/api';
+import { api, AIBudgetOverride } from '../../../lib/api';
 import AIBudgetTile, {
   BudgetBar,
   formatPercentageLabel,
@@ -45,6 +45,30 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitNotice, setSubmitNotice] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const [page, setPage] = useState<{
+    rows: (AIBudgetOverride & { id: number })[];
+    nextCursor: number;
+    loaded: boolean;
+    loading: boolean;
+    error?: string;
+  }>({ rows: [], nextCursor: 0, loaded: false, loading: false });
+
+  async function loadPage(cursor: number) {
+    if (page.loading) return;
+    setPage((prev) => ({ ...prev, loading: true, error: undefined }));
+    try {
+      const res = await api.admin.aiBudgetOverridesList({ limit: 25, cursor });
+      setPage((prev) => ({
+        rows: cursor === 0 ? (res.overrides ?? []) : [...prev.rows, ...(res.overrides ?? [])],
+        nextCursor: res.next_cursor ?? 0,
+        loaded: true,
+        loading: false,
+      }));
+    } catch (err) {
+      setPage((prev) => ({ ...prev, loading: false, error: String(err) }));
+    }
+  }
 
   if (!isOwner) {
     return (
@@ -366,6 +390,96 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
               </tbody>
             </table>
           </div>
+        )}
+      </article>
+
+      {/* Full audit log — paginated drill-down via GET /admin/ai-budget/overrides */}
+      <article className="panel">
+        <h2 style={{ marginBottom: 4 }}>Full audit log</h2>
+        <p className="subtle" style={{ marginTop: 0 }}>
+          Complete override history from markt&apos;s `ai_budget_overrides` table. Paginated, 25 per
+          page. Includes row IDs not available in the at-a-glance teaser above.
+        </p>
+
+        {!page.loaded && (
+          <button
+            type="button"
+            className="btn muted"
+            style={{ marginTop: 12 }}
+            onClick={() => void loadPage(0)}
+            disabled={page.loading}
+          >
+            {page.loading ? 'Loading…' : 'Load full history'}
+          </button>
+        )}
+
+        {page.loaded && page.rows.length === 0 && !page.error && (
+          <p className="subtle" style={{ marginTop: 12 }}>
+            No overrides recorded yet.
+          </p>
+        )}
+
+        {page.loaded && page.rows.length > 0 && (
+          <div className="table-wrap" style={{ marginTop: 12 }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>When</th>
+                  <th>New cap</th>
+                  <th>Reason</th>
+                  <th>By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {page.rows.map((o) => (
+                  <tr key={o.id}>
+                    <td className="muted-text" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {o.id}
+                    </td>
+                    <td>
+                      <span title={o.set_at ?? ''}>
+                        {formatRelativeTime(o.set_at) ?? formatDate(o.set_at)}
+                      </span>
+                      <div className="muted-text" style={{ fontSize: '0.78rem' }}>
+                        {formatDate(o.set_at)}
+                      </div>
+                    </td>
+                    <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {formatUSD(o.new_cap_usd ?? 0)}
+                    </td>
+                    <td>{o.reason || '—'}</td>
+                    <td className="muted-text">{o.set_by_user_id ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {page.loaded && page.nextCursor > 0 && (
+          <button
+            type="button"
+            className="btn muted"
+            style={{ marginTop: 12 }}
+            onClick={() => void loadPage(page.nextCursor)}
+            disabled={page.loading}
+          >
+            {page.loading ? 'Loading…' : 'Load more (next 25)'}
+          </button>
+        )}
+
+        {page.loaded && page.nextCursor === 0 && page.rows.length > 0 && (
+          <p className="subtle" style={{ marginTop: 12, fontStyle: 'italic' }}>
+            End of history — {page.rows.length} {page.rows.length === 1 ? 'entry' : 'entries'}{' '}
+            shown.
+          </p>
+        )}
+
+        {page.error && (
+          <p className="text-error" style={{ marginTop: 12 }}>
+            {page.error}
+          </p>
         )}
       </article>
 
