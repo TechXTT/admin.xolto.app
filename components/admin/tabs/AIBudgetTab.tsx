@@ -55,6 +55,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
   }>({ rows: [], nextCursor: 0, loaded: false, loading: false });
 
   async function loadPage(cursor: number) {
+    if (page.loading) return;
     setPage((prev) => ({ ...prev, loading: true, error: undefined }));
     try {
       const res = await api.admin.aiBudgetOverridesList({ limit: 25, cursor });
