@@ -38,6 +38,15 @@ body {
   gap: 14px;
 }
 
+/* XOL-160: canonical CSS Grid min-width: 0 fix. Grid items default to
+   min-width: min-content; tables in .table-wrap have min-width: 680px,
+   forcing the entire grid column to ≥680px regardless of viewport. This
+   rule allows grid items to shrink, so .table-wrap { overflow: auto }
+   properly isolates the wide table inside the panel. */
+.admin-shell > * {
+  min-width: 0;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
