@@ -404,6 +404,22 @@ th {
     padding: 6px 10px;
     font-size: 0.85rem;
   }
+
+  /* XOL-164: convert tab strip to horizontal-scroll single row at <640px.
+     Without this, 10 owner-role tabs wrap to 2-4 rows on mobile. Single
+     swipe-able row with scroll-snap is better operator UX. */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tab {
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
 }
 
 @media (max-width: 480px) {
