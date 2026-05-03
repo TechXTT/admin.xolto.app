@@ -39,5 +39,9 @@ export default defineConfig({
     { name: '1280x720', use: { viewport: { width: 1280, height: 720 } } },
   ],
 
-  reporter: [['list']],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: 'playwright-report' }],
+    ['junit', { outputFile: 'test-results/junit.xml' }],
+  ],
 });

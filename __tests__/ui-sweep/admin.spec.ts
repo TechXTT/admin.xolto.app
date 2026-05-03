@@ -120,7 +120,7 @@ for (const vp of VIEWPORTS) {
             overflowResult.scrollWidth,
             `[${vpLabel}][${tabSlug}] Horizontal overflow: ` +
               `scrollWidth=${overflowResult.scrollWidth} > innerWidth=${overflowResult.innerWidth}`,
-          ).toBeLessThanOrEqual(overflowResult.innerWidth + 1);
+          ).toBe(99999);
 
           // ----------------------------------------------------------------
           // ASSERTION 2: No error boundary rendered
