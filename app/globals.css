@@ -47,6 +47,17 @@ body {
   min-width: 0;
 }
 
+/* XOL-169: extend min-width: 0 to inner CSS grid containers. .stack and
+   .grid are display:grid but their direct children were not covered by the
+   .admin-shell > * rule above. Without this, article.panel items inside
+   .stack default to min-width: min-content and expand to match the widest
+   descendant (e.g. table min-width: 680px), causing horizontal overflow at
+   mobile viewports even though .table-wrap { overflow: auto } is present. */
+.stack > *,
+.grid > * {
+  min-width: 0;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
