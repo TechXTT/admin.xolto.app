@@ -9,7 +9,8 @@
     "lint": "next lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:ui-sweep": "playwright test __tests__/ui-sweep/admin.spec.ts"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.48.0",
@@ -19,6 +20,7 @@
     "react-dom": "18.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "25.5.2",
     "@types/react": "19.2.14",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
