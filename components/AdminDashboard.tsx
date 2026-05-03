@@ -494,7 +494,7 @@ export default function AdminDashboard() {
           <span className="subtle-pill">role: {viewerRole || 'admin'}</span>
           {isOwner && (
             <button
-              className="btn"
+              className="btn muted"
               type="button"
               disabled={pendingAction === 'reconcile'}
               onClick={() => void runOwnerReconcile()}
@@ -502,7 +502,7 @@ export default function AdminDashboard() {
               Run reconcile
             </button>
           )}
-          <button className="btn muted" type="button" onClick={signOut}>
+          <button className="btn" type="button" onClick={signOut}>
             Sign out
           </button>
         </div>
