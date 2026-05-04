@@ -54,12 +54,17 @@ jobs:
       - name: Run admin UI sweep
         run: pnpm test:ui-sweep
 
-      # Contract: test-results/ contains ONLY trace artifacts from failed tests.
-      # Reporter outputs (junit, html) are written to separate directories
-      # (playwright-junit/, playwright-report/). If test-results/ has anything
-      # in it after a run, a test failed. This invariant is established by
-      # playwright.config.ts reporter outputFile paths — do not change those
-      # without updating this gate.
+      # Contract: test-results/ is NOT used by this suite. Playwright runtime
+      # artifacts (traces, .last-run.json) go to playwright-failures/ (outputDir
+      # in playwright.config.ts). Reporter outputs go to playwright-junit/ and
+      # playwright-report/. test-results/ is therefore NEVER created on a green
+      # run — the [ -d test-results ] check below is false, and the gate passes.
+      # On a genuine test failure, Playwright still writes trace subdirs to
+      # playwright-failures/; this gate doesn't check that dir (the playwright
+      # step itself exits non-zero, failing the job). The gate below is a
+      # secondary belt-and-suspenders check: if test-results/ somehow appears,
+      # something unexpected wrote to it — surface it.
+      # Do NOT change outputDir in playwright.config.ts without updating this comment.
       - name: Verify no failure traces (Class-8 ship-verification)
         if: always()
         run: |
@@ -84,6 +89,6 @@ jobs:
           name: admin-ui-sweep-failures-${{ github.run_id }}
           path: |
             __tests__/ui-sweep/
-            test-results/
+            playwright-failures/
           retention-days: 14
           if-no-files-found: ignore

@@ -7,6 +7,11 @@ export default defineConfig({
   // Spec files for the admin sweep
   testMatch: '__tests__/ui-sweep/admin.spec.ts',
 
+  // Playwright runtime artifacts (traces, .last-run.json, failure screenshots) go here.
+  // MUST NOT be test-results/ — the Class-8 gate treats any content in test-results/ as
+  // evidence of a failed test. Keep this path in sync with .gitignore and admin-ui-sweep.yml.
+  outputDir: 'playwright-failures',
+
   // One-time login before the whole suite runs
   globalSetup: './__tests__/ui-sweep/global-setup.ts',
 

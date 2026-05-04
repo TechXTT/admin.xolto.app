@@ -22,6 +22,7 @@ screenshots/
 test-results/
 playwright-report/
 playwright-junit/
+playwright-failures/
 .playwright-mcp/
 
 # Auth state — contains session tokens, never commit
