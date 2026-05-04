@@ -54,6 +54,12 @@ jobs:
       - name: Run admin UI sweep
         run: pnpm test:ui-sweep
 
+      # Contract: test-results/ contains ONLY trace artifacts from failed tests.
+      # Reporter outputs (junit, html) are written to separate directories
+      # (playwright-junit/, playwright-report/). If test-results/ has anything
+      # in it after a run, a test failed. This invariant is established by
+      # playwright.config.ts reporter outputFile paths — do not change those
+      # without updating this gate.
       - name: Verify no failure traces (Class-8 ship-verification)
         if: always()
         run: |

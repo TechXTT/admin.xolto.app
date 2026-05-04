@@ -21,6 +21,7 @@ tsconfig.tsbuildinfo
 screenshots/
 test-results/
 playwright-report/
+playwright-junit/
 .playwright-mcp/
 
 # Auth state — contains session tokens, never commit
