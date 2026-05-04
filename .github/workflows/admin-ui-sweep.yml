@@ -74,6 +74,47 @@ jobs:
             exit 1
           fi
 
+      # Contract: tests-actually-ran invariant (XOL-172 / Class-8 sub-pattern B).
+      # verify-no-failure-traces above can trivially pass when ZERO tests ran (e.g.,
+      # globalSetup fails before any spec executes). Empty test-results/ != "everything
+      # green"; it could mean "nothing ran". This step parses playwright-junit/junit.xml
+      # and fails the workflow if either:
+      #   - tests=0 (work didn't run; gate cannot be value-bearing)
+      #   - failures>0 (belt-and-suspenders against verify-no-failure-traces missing a case)
+      # This invariant pairs with the verify-no-failure-traces gate above; together they
+      # enforce the Class-8 contract: "<work-actually-happened-check> && <command> &&
+      # <artifact-state-check> || exit 1".
+      - name: Verify tests actually ran (XOL-172 invariant)
+        if: always()
+        run: |
+          JUNIT_PATH="playwright-junit/junit.xml"
+          if [ ! -f "$JUNIT_PATH" ]; then
+            echo "::error::JUnit report missing at $JUNIT_PATH — sweep step did not produce expected output."
+            exit 1
+          fi
+          python3 - "$JUNIT_PATH" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          junit_path = sys.argv[1]
+          try:
+              root = ET.parse(junit_path).getroot()
+          except ET.ParseError as e:
+              print(f"::error::JUnit XML parse failed: {e}", flush=True)
+              sys.exit(1)
+          tests = int(root.get("tests", "0"))
+          failures = int(root.get("failures", "0"))
+          errors = int(root.get("errors", "0"))
+          print(f"JUnit: tests={tests} failures={failures} errors={errors}", flush=True)
+          if tests == 0:
+              print("::error::tests-actually-ran invariant failed: tests=0. Likely globalSetup failure or spec-collection failure. Gate cannot be value-bearing if work didn't run.", flush=True)
+              sys.exit(1)
+          if failures != 0:
+              print(f"::error::tests-actually-ran invariant failed: failures={failures}. Belt-and-suspenders against verify-no-failure-traces.", flush=True)
+              sys.exit(1)
+          if errors != 0:
+              print(f"::error::tests-actually-ran invariant failed: errors={errors}. Belt-and-suspenders.", flush=True)
+              sys.exit(1)
+          PY
+
       - name: Upload Playwright HTML report on failure
         if: failure()
         uses: actions/upload-artifact@v4
