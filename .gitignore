@@ -17,8 +17,16 @@ tsconfig.tsbuildinfo
 .mcp.json
 
 # Test / QA artifacts
-*.png
+# NOTE: __tests__/ui-sweep/**/*.png are NOT gitignored — they are committed baselines (XOL-167)
 screenshots/
 test-results/
 playwright-report/
+playwright-junit/
+playwright-failures/
 .playwright-mcp/
+
+# Auth state — contains session tokens, never commit
+__tests__/.auth/
+
+# Local test credentials — never commit
+.env.test
