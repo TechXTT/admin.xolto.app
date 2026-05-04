@@ -220,7 +220,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
             );
           }
           return (
-            <div className="table-wrap" style={{ marginTop: 12 }}>
+            <div className="table-wrap" data-allow-overflow="true" style={{ marginTop: 12 }}>
               <table>
                 <thead>
                   <tr>
@@ -359,7 +359,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
             No overrides recorded.
           </p>
         ) : (
-          <div className="table-wrap" style={{ marginTop: 12 }}>
+          <div className="table-wrap" data-allow-overflow="true" style={{ marginTop: 12 }}>
             <table>
               <thead>
                 <tr>
@@ -420,7 +420,7 @@ export default function AIBudgetTab({ isOwner }: AIBudgetTabProps) {
         )}
 
         {page.loaded && page.rows.length > 0 && (
-          <div className="table-wrap" style={{ marginTop: 12 }}>
+          <div className="table-wrap" data-allow-overflow="true" style={{ marginTop: 12 }}>
             <table>
               <thead>
                 <tr>

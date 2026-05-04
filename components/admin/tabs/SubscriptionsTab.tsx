@@ -82,7 +82,7 @@ export default function SubscriptionsTab({
       {loadingTabData ? (
         <p className="subtle">Loading subscriptions…</p>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap" data-allow-overflow="true">
           <table>
             <thead>
               <tr>

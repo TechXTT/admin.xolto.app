@@ -47,7 +47,7 @@ export default function GrowthTab({
         {loadingTabData ? (
           <p className="subtle">Loading cohorts…</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" data-allow-overflow="true">
             <table>
               <thead>
                 <tr>

@@ -508,7 +508,8 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      <nav className="tabs">
+      {/* XOL-168: data-allow-overflow — legitimate horizontal scroll for tab strip at <640px mobile viewports (XOL-164 pattern) */}
+      <nav className="tabs" data-allow-overflow="true">
         {tabs.map((item) => (
           <button
             key={item}
