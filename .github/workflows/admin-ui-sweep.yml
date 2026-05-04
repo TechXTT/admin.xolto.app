@@ -74,6 +74,43 @@ jobs:
             exit 1
           fi
 
+      # Contract: tests-actually-ran invariant (XOL-172 / Class-8 sub-pattern B).
+      # verify-no-failure-traces above can trivially pass when ZERO tests ran (e.g.,
+      # globalSetup fails before any spec executes). Empty test-results/ != "everything
+      # green"; it could mean "nothing ran". This step parses playwright-junit/junit.xml
+      # and fails the workflow if either:
+      #   - tests=0 (work didn't run; gate cannot be value-bearing)
+      #   - failures>0 (belt-and-suspenders against verify-no-failure-traces missing a case)
+      # This invariant pairs with the verify-no-failure-traces gate above; together they
+      # enforce the Class-8 contract: "<work-actually-happened-check> && <command> &&
+      # <artifact-state-check> || exit 1".
+      - name: Verify tests actually ran (XOL-172 invariant)
+        if: always()
+        run: |
+          JUNIT_PATH="playwright-junit/junit.xml"
+          if [ ! -f "$JUNIT_PATH" ]; then
+            echo "::error::JUnit report missing at $JUNIT_PATH — sweep step did not produce expected output."
+            exit 1
+          fi
+          # Extract attributes from <testsuites ...> root element. xmllint preferred;
+          # fall back to grep if xmllint unavailable in runner.
+          if command -v xmllint >/dev/null 2>&1; then
+            TESTS=$(xmllint --xpath "string(/testsuites/@tests)" "$JUNIT_PATH" 2>/dev/null || echo 0)
+            FAILURES=$(xmllint --xpath "string(/testsuites/@failures)" "$JUNIT_PATH" 2>/dev/null || echo 0)
+          else
+            TESTS=$(grep -oE 'testsuites[^>]*tests="[0-9]+"' "$JUNIT_PATH" | grep -oE '[0-9]+' | head -1 || echo 0)
+            FAILURES=$(grep -oE 'testsuites[^>]*failures="[0-9]+"' "$JUNIT_PATH" | grep -oE '[0-9]+' | head -1 || echo 0)
+          fi
+          echo "JUnit: tests=$TESTS failures=$FAILURES"
+          if [ "$TESTS" = "0" ] || [ -z "$TESTS" ]; then
+            echo "::error::tests-actually-ran invariant failed: tests=0. Likely globalSetup failure or spec-collection failure. Gate cannot be value-bearing if work didn't run."
+            exit 1
+          fi
+          if [ "$FAILURES" != "0" ]; then
+            echo "::error::tests-actually-ran invariant failed: failures=$FAILURES. Belt-and-suspenders against verify-no-failure-traces."
+            exit 1
+          fi
+
       - name: Upload Playwright HTML report on failure
         if: failure()
         uses: actions/upload-artifact@v4
