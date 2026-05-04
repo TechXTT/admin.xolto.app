@@ -92,24 +92,28 @@ jobs:
             echo "::error::JUnit report missing at $JUNIT_PATH — sweep step did not produce expected output."
             exit 1
           fi
-          # Extract attributes from <testsuites ...> root element. xmllint preferred;
-          # fall back to grep if xmllint unavailable in runner.
-          if command -v xmllint >/dev/null 2>&1; then
-            TESTS=$(xmllint --xpath "string(/testsuites/@tests)" "$JUNIT_PATH" 2>/dev/null || echo 0)
-            FAILURES=$(xmllint --xpath "string(/testsuites/@failures)" "$JUNIT_PATH" 2>/dev/null || echo 0)
-          else
-            TESTS=$(grep -oE 'testsuites[^>]*tests="[0-9]+"' "$JUNIT_PATH" | grep -oE '[0-9]+' | head -1 || echo 0)
-            FAILURES=$(grep -oE 'testsuites[^>]*failures="[0-9]+"' "$JUNIT_PATH" | grep -oE '[0-9]+' | head -1 || echo 0)
-          fi
-          echo "JUnit: tests=$TESTS failures=$FAILURES"
-          if [ "$TESTS" = "0" ] || [ -z "$TESTS" ]; then
-            echo "::error::tests-actually-ran invariant failed: tests=0. Likely globalSetup failure or spec-collection failure. Gate cannot be value-bearing if work didn't run."
-            exit 1
-          fi
-          if [ "$FAILURES" != "0" ]; then
-            echo "::error::tests-actually-ran invariant failed: failures=$FAILURES. Belt-and-suspenders against verify-no-failure-traces."
-            exit 1
-          fi
+          python3 - "$JUNIT_PATH" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          junit_path = sys.argv[1]
+          try:
+              root = ET.parse(junit_path).getroot()
+          except ET.ParseError as e:
+              print(f"::error::JUnit XML parse failed: {e}", flush=True)
+              sys.exit(1)
+          tests = int(root.get("tests", "0"))
+          failures = int(root.get("failures", "0"))
+          errors = int(root.get("errors", "0"))
+          print(f"JUnit: tests={tests} failures={failures} errors={errors}", flush=True)
+          if tests == 0:
+              print("::error::tests-actually-ran invariant failed: tests=0. Likely globalSetup failure or spec-collection failure. Gate cannot be value-bearing if work didn't run.", flush=True)
+              sys.exit(1)
+          if failures != 0:
+              print(f"::error::tests-actually-ran invariant failed: failures={failures}. Belt-and-suspenders against verify-no-failure-traces.", flush=True)
+              sys.exit(1)
+          if errors != 0:
+              print(f"::error::tests-actually-ran invariant failed: errors={errors}. Belt-and-suspenders.", flush=True)
+              sys.exit(1)
+          PY
 
       - name: Upload Playwright HTML report on failure
         if: failure()
