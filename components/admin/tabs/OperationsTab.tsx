@@ -189,7 +189,7 @@ export default function OperationsTab({
         {loadingTabData ? (
           <p className="subtle">Loading search runs…</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" data-allow-overflow="true">
             <table>
               <thead>
                 <tr>

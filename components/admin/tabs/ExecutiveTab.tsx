@@ -50,7 +50,7 @@ export default function ExecutiveTab({
         {loadingTabData ? (
           <p className="subtle">Loading revenue…</p>
         ) : (
-          <div className="table-wrap">
+          <div className="table-wrap" data-allow-overflow="true">
             <table>
               <thead>
                 <tr>

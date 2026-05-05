@@ -44,7 +44,8 @@ function UsersTable({
   return (
     <>
       <h3 style={{ marginTop: 20 }}>{title}</h3>
-      <div className="table-wrap">
+      {/* XOL-168: data-allow-overflow — legitimate horizontal scroll for wide data table (min-width: 680px) on mobile */}
+      <div className="table-wrap" data-allow-overflow="true">
         <table>
           <thead>
             <tr>
