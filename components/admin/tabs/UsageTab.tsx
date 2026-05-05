@@ -74,7 +74,7 @@ export default function UsageTab({
       {loadingTabData ? (
         <p className="subtle">Loading usage log…</p>
       ) : (
-        <div className="table-wrap">
+        <div className="table-wrap" data-allow-overflow="true">
           <table>
             <thead>
               <tr>
