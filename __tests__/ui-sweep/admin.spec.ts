@@ -1,8 +1,15 @@
 // XOL-167: Admin UI sweep — 8 viewports × 10 owner-role tabs = 80 tests
 //
 // Regression baseline for admin.xolto.app. Detects:
-//   - Class-5 inner-container horizontal overflow (body.scrollWidth > innerWidth)
+//   - Class-5 body-level horizontal overflow (body.scrollWidth > innerWidth)
+//   - Class-5 inner-container overflow: constrained-overflow or fixed/absolute
+//     elements whose scrollWidth > clientWidth (XOL-168)
 //   - Error boundary renders (data-testid="error-boundary")
+//
+// Opt-out contract: elements that legitimately scroll horizontally (e.g.
+// .table-wrap data tables, .tabs nav on mobile) carry data-allow-overflow="true"
+// so the Class-5 inner-container detector skips them. See XOL-168 for the
+// rationale per element.
 //
 // Auth: storageState loaded via playwright.config.ts globalSetup (one login per run).
 // Output: __tests__/ui-sweep/<WxH>/<tab-slug>.png committed as baseline.
@@ -13,6 +20,68 @@
 import { test, expect, chromium } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+// ---------------------------------------------------------------------------
+// XOL-168: Class-5 inner-container overflow detector
+// ---------------------------------------------------------------------------
+// Walks every element with constrained overflow (overflow !== 'visible') or
+// fixed/absolute positioning. Any element whose scrollWidth > clientWidth + 1
+// is an offender — UNLESS it carries data-allow-overflow="true" (opt-out
+// contract for legitimate horizontal scroll containers such as .table-wrap and
+// the .tabs nav strip at mobile widths).
+// ---------------------------------------------------------------------------
+
+interface OverflowOffender {
+  tag: string;
+  cls: string;
+  id: string;
+  sw: number;
+  cw: number;
+  overflow: string;
+  position: string;
+  textPreview: string;
+}
+
+async function detectOverflowOffenders(
+  page: import('@playwright/test').Page,
+): Promise<OverflowOffender[]> {
+  return page.evaluate(() => {
+    const offenders: {
+      tag: string;
+      cls: string;
+      id: string;
+      sw: number;
+      cw: number;
+      overflow: string;
+      position: string;
+      textPreview: string;
+    }[] = [];
+    document.querySelectorAll('*').forEach((el) => {
+      const computed = getComputedStyle(el);
+      const isOverflowConstrained = computed.overflow !== 'visible' && computed.overflow !== '';
+      const isFixedOrAbsolute = computed.position === 'fixed' || computed.position === 'absolute';
+      if (!isOverflowConstrained && !isFixedOrAbsolute) return;
+      if ((el as HTMLElement).dataset?.allowOverflow === 'true') return;
+      // Tag-class universal exemption: form inputs have intentional clip-overflow
+      // for text-scrolling UX (browser-default behavior). See
+      // feedback_class5_assertion_design.md Contract C for design rationale.
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)) return;
+      if (el.scrollWidth > el.clientWidth + 1) {
+        offenders.push({
+          tag: el.tagName,
+          cls: (el as HTMLElement).className || '',
+          id: el.id || '',
+          sw: el.scrollWidth,
+          cw: el.clientWidth,
+          overflow: computed.overflow,
+          position: computed.position,
+          textPreview: (el.textContent || '').slice(0, 60),
+        });
+      }
+    });
+    return offenders;
+  });
+}
 
 // Tabs to sweep — matches the owner-role tabs array in AdminDashboard.tsx:
 // ['overview','users','operations','usage','executive','subscriptions','growth','alerts','calibration','ai-budget']
@@ -123,7 +192,19 @@ for (const vp of VIEWPORTS) {
           ).toBeLessThanOrEqual(overflowResult.innerWidth + 1);
 
           // ----------------------------------------------------------------
-          // ASSERTION 2: No error boundary rendered
+          // ASSERTION 2: Class-5 inner-container overflow (XOL-168)
+          // Elements with constrained overflow or fixed/absolute positioning
+          // must not overflow their own clientWidth. Legitimate scroll
+          // containers carry data-allow-overflow="true" to opt out.
+          // ----------------------------------------------------------------
+          const offenders = await detectOverflowOffenders(page);
+          expect(
+            offenders,
+            `Class-5 overflow at ${tabSlug} × ${vpLabel}: ${JSON.stringify(offenders, null, 2)}`,
+          ).toEqual([]);
+
+          // ----------------------------------------------------------------
+          // ASSERTION 3: No error boundary rendered
           // ----------------------------------------------------------------
           const errorBoundaryCount = await page.locator('[data-testid="error-boundary"]').count();
           expect(errorBoundaryCount, `[${vpLabel}][${tabSlug}] Error boundary is rendered`).toBe(0);
