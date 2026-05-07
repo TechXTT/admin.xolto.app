@@ -2,6 +2,13 @@
 
 Regression baseline for `admin.xolto.app`. Captures full-page screenshots across 8 viewports × 10 owner-role tabs (80 PNGs total) and asserts no horizontal overflow and no error-boundary renders.
 
+## Cross-repo XOL-171 alignment
+
+This README documents admin's wiring. Sister patterns:
+
+- **xolto-landing** (`www.xolto.app`): targets a local production build (`pnpm build && pnpm start`) instead of a deployed preview URL. Structurally avoids chicken-egg without preview-URL plumbing. See `www.xolto.app/__tests__/README.md`.
+- **xolto-app** (`dash.xolto.app`): no sweep CI workflow yet; XOL-177 will create it using this same `wait-for-vercel-preview` + `VERCEL_AUTOMATION_BYPASS_SECRET` pattern.
+
 ## Why this exists
 
 XOL-160 fixed a Class-5 inner-container overflow on admin tabs (Users, Operations, Usage, Subscriptions, Growth) at viewports ≤640px by adding `min-width: 0` to grid children. This sweep provides a committed baseline so that regression is caught automatically on every future PR.

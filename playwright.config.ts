@@ -35,9 +35,12 @@ export default defineConfig({
     // headers so Playwright can reach the password-protected preview deployment.
     // x-vercel-set-bypass-cookie ensures Playwright's storageState picks up the
     // bypass cookie, keeping subsequent navigations authenticated past the initial fetch.
-    // When the secret is absent (local runs against prod), the block is empty and
-    // no headers are added — no behavior change for existing local/prod runs.
-    ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+    // Length check defends against empty-string env (misconfigured GitHub Secret /
+    // accidental empty .env): empty string would inject empty bypass header → Vercel
+    // 401 with confusing "auth misconfigured" failure mode rather than the cleaner
+    // "secret unset → fall through to prod" path.
+    ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET &&
+    process.env.VERCEL_AUTOMATION_BYPASS_SECRET.length > 0
       ? {
           extraHTTPHeaders: {
             'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
