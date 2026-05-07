@@ -29,6 +29,22 @@ export default defineConfig({
     // Cookie-based auth requires credentials to be included on every request
     // (Playwright storageState handles cookies automatically; this is belt-and-suspenders)
     ignoreHTTPSErrors: false,
+
+    // XOL-171: Vercel Deployment Protection bypass for preview URLs.
+    // When VERCEL_AUTOMATION_BYPASS_SECRET is set (CI on PRs), inject the bypass
+    // headers so Playwright can reach the password-protected preview deployment.
+    // x-vercel-set-bypass-cookie ensures Playwright's storageState picks up the
+    // bypass cookie, keeping subsequent navigations authenticated past the initial fetch.
+    // When the secret is absent (local runs against prod), the block is empty and
+    // no headers are added — no behavior change for existing local/prod runs.
+    ...(process.env.VERCEL_AUTOMATION_BYPASS_SECRET
+      ? {
+          extraHTTPHeaders: {
+            'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET,
+            'x-vercel-set-bypass-cookie': 'true',
+          },
+        }
+      : {}),
   },
 
   // 8 viewports: mobile → tablet → desktop

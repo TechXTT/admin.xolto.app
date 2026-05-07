@@ -11,13 +11,19 @@ jobs:
     timeout-minutes: 30
 
     env:
-      PLAYWRIGHT_BASE_URL: https://admin.xolto.app
       ADMIN_TEST_EMAIL: ${{ secrets.ADMIN_TEST_EMAIL }}
       ADMIN_TEST_PASSWORD: ${{ secrets.ADMIN_TEST_PASSWORD }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Wait for Vercel preview deployment
+        id: vercel-preview
+        uses: patrickedqvist/wait-for-vercel-preview@v1.3.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          max_timeout: 600
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -52,6 +58,9 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Run admin UI sweep
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.vercel-preview.outputs.url || 'https://admin.xolto.app' }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: pnpm test:ui-sweep
 
       # Contract: test-results/ is NOT used by this suite. Playwright runtime
