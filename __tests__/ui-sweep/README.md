@@ -8,11 +8,11 @@ XOL-160 fixed a Class-5 inner-container overflow on admin tabs (Users, Operation
 
 ## Required env vars
 
-| Variable                        | Description                                                                              |
-| ------------------------------- | ---------------------------------------------------------------------------------------- |
-| `PLAYWRIGHT_BASE_URL`           | Admin app base URL. On PR runs, automatically set to the Vercel preview URL (XOL-171).  Defaults to `https://admin.xolto.app` when unset. |
-| `ADMIN_TEST_EMAIL`              | Email for the admin/owner test account                                                   |
-| `ADMIN_TEST_PASSWORD`           | Password for the admin/owner test account                                                |
+| Variable                          | Description                                                                                                                                                                                  |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PLAYWRIGHT_BASE_URL`             | Admin app base URL. On PR runs, automatically set to the Vercel preview URL (XOL-171). Defaults to `https://admin.xolto.app` when unset.                                                     |
+| `ADMIN_TEST_EMAIL`                | Email for the admin/owner test account                                                                                                                                                       |
+| `ADMIN_TEST_PASSWORD`             | Password for the admin/owner test account                                                                                                                                                    |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | (NEW — XOL-171) Vercel protection-bypass token for preview deployments. Required to reach Vercel preview URLs that are behind Deployment Protection. Omit for local runs against production. |
 
 The test account must have `owner` role to exercise all 10 tabs (the extra 6 owner-only tabs: executive, subscriptions, growth, alerts, calibration, ai-budget only render for owner-role viewers).
