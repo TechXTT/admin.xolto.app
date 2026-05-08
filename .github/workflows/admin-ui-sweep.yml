@@ -5,19 +5,86 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+  deployments: read
+
 jobs:
   ui-sweep:
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     env:
-      PLAYWRIGHT_BASE_URL: https://admin.xolto.app
       ADMIN_TEST_EMAIL: ${{ secrets.ADMIN_TEST_EMAIL }}
       ADMIN_TEST_PASSWORD: ${{ secrets.ADMIN_TEST_PASSWORD }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Wait for Vercel preview deployment
+        id: vercel-preview
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          REPO="${{ github.repository }}"
+          MAX_WAIT=600
+          ELAPSED=0
+
+          echo "Polling GitHub deployments for PR #${PR_NUMBER} …"
+          PREVIEW_URL=""
+          while [ -z "$PREVIEW_URL" ] && [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
+            # Fetch deployments for the head SHA of this PR
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+            DEPLOYMENTS=$(gh api "repos/${REPO}/deployments?sha=${HEAD_SHA}&per_page=10" --jq '.[].id' 2>/dev/null || true)
+            for DEP_ID in $DEPLOYMENTS; do
+              STATUS=$(gh api "repos/${REPO}/deployments/${DEP_ID}/statuses?per_page=1" --jq '.[0].state' 2>/dev/null || true)
+              if [ "$STATUS" = "success" ]; then
+                PREVIEW_URL=$(gh api "repos/${REPO}/deployments/${DEP_ID}/statuses?per_page=1" --jq '.[0].target_url' 2>/dev/null || true)
+                [ -n "$PREVIEW_URL" ] && break
+              fi
+            done
+            if [ -z "$PREVIEW_URL" ]; then
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+            fi
+          done
+
+          if [ -z "$PREVIEW_URL" ]; then
+            echo "::error::Timed out waiting for a successful Vercel deployment for PR #${PR_NUMBER}"
+            exit 1
+          fi
+          echo "Preview URL found: ${PREVIEW_URL}"
+
+          # Now wait for the URL to return 200, sending the bypass header so
+          # Vercel Deployment Protection doesn't block the health probe.
+          # Use a bash array to avoid word-splitting issues with the header value.
+          echo "Waiting for ${PREVIEW_URL} to respond 200 …"
+          ELAPSED=0
+          CURL_ARGS=(-s -o /dev/null -w "%{http_code}" --max-time 10)
+          if [ -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}" ]; then
+            CURL_ARGS+=(-H "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}")
+          fi
+          HTTP_CODE="000"
+          while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
+            HTTP_CODE=$(curl "${CURL_ARGS[@]}" "${PREVIEW_URL}" || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Preview deployment is live (HTTP 200)."
+              break
+            fi
+            echo "HTTP ${HTTP_CODE} — retrying in 5s …"
+            sleep 5
+            ELAPSED=$((ELAPSED + 5))
+          done
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Timed out waiting for HTTP 200 from ${PREVIEW_URL}"
+            exit 1
+          fi
+
+          echo "url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -52,6 +119,9 @@ jobs:
         run: pnpm exec playwright install-deps chromium
 
       - name: Run admin UI sweep
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ steps.vercel-preview.outputs.url || 'https://admin.xolto.app' }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: pnpm test:ui-sweep
 
       # Contract: test-results/ is NOT used by this suite. Playwright runtime
