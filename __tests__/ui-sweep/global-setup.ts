@@ -40,8 +40,24 @@ export default async function globalSetup(): Promise<void> {
   fs.mkdirSync(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
   const browser = await chromium.launch({ headless: true });
+
+  // XOL-171: inject the Vercel Deployment Protection bypass header so globalSetup
+  // can reach the preview URL. The playwright.config.ts `use.extraHTTPHeaders` only
+  // applies to spec-level contexts; globalSetup creates its own context here, so we
+  // must set the header explicitly. The length guard mirrors playwright.config.ts to
+  // avoid injecting an empty-string bypass (which would yield a confusing Vercel 401).
+  const bypass = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const extraHTTPHeaders =
+    bypass && bypass.length > 0
+      ? {
+          'x-vercel-protection-bypass': bypass,
+          'x-vercel-set-bypass-cookie': 'true',
+        }
+      : undefined;
+
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
+    ...(extraHTTPHeaders ? { extraHTTPHeaders } : {}),
   });
   const page = await context.newPage();
 
